@@ -1,0 +1,20 @@
+{
+  "name": "Shravan Omanakuttan — Portfolio",
+  "short_name": "Shravan",
+  "description": "Portfolio of Shravan Omanakuttan — CS & AI builder",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "orientation": "landscape-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["portfolio", "developer"],
+  "lang": "en"
+}

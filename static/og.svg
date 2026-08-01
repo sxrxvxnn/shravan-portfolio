@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#1a1b26"/>
+
+  <!-- scanlines subtle -->
+  <rect width="1200" height="630" fill="url(#scanlines)" opacity="0.04"/>
+  <defs>
+    <pattern id="scanlines" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="2" fill="#000"/>
+    </pattern>
+  </defs>
+
+  <!-- terminal window -->
+  <rect x="60" y="52" width="1080" height="526" rx="10" fill="#16161e" stroke="#2f3549" stroke-width="1.5"/>
+
+  <!-- titlebar -->
+  <rect x="60" y="52" width="1080" height="38" rx="10" fill="#13141f"/>
+  <rect x="60" y="76" width="1080" height="14" fill="#13141f"/>
+
+  <!-- traffic lights -->
+  <circle cx="94"  cy="71" r="6" fill="#f7768e"/>
+  <circle cx="114" cy="71" r="6" fill="#e0af68"/>
+  <circle cx="134" cy="71" r="6" fill="#9ece6a"/>
+
+  <!-- title -->
+  <text x="600" y="76" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="12" fill="#565f89">shravan@portfolio — terminal</text>
+
+  <!-- prompt 1 -->
+  <text x="90" y="132" font-family="'IBM Plex Mono', monospace" font-size="13" fill="#7aa2f7" style="filter:drop-shadow(0 0 6px rgba(122,162,247,0.5))">shravan@portfolio:~$</text>
+  <text x="352" y="132" font-family="'IBM Plex Mono', monospace" font-size="13" fill="#c0caf5"> whoami</text>
+
+  <!-- whoami output -->
+  <text x="90" y="158" font-family="'IBM Plex Mono', monospace" font-size="15" font-weight="700" fill="#7aa2f7" style="filter:drop-shadow(0 0 8px rgba(122,162,247,0.6))">Shravan Omanakuttan</text>
+  <text x="90" y="180" font-family="'IBM Plex Mono', monospace" font-size="12" fill="#a9b1d6">SWE Intern — Beagle Security  ·  B.Tech CS &amp; AI  ·  Trivandrum, India</text>
+
+  <!-- prompt 2 -->
+  <text x="90" y="220" font-family="'IBM Plex Mono', monospace" font-size="13" fill="#7aa2f7">shravan@portfolio:~$</text>
+  <text x="352" y="220" font-family="'IBM Plex Mono', monospace" font-size="13" fill="#c0caf5"> cat sonar</text>
+
+  <!-- cat output -->
+  <text x="90" y="250" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="700" fill="#7aa2f7">NAME</text>
+  <text x="90" y="272" font-family="'IBM Plex Mono', monospace" font-size="12" fill="#a9b1d6">    Sonar</text>
+  <text x="90" y="296" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="700" fill="#7aa2f7">DESCRIPTION</text>
+  <text x="90" y="318" font-family="'IBM Plex Mono', monospace" font-size="12" fill="#a9b1d6">    Apollo.io-style lead intelligence platform built solo in 90 days.</text>
+  <text x="90" y="338" font-family="'IBM Plex Mono', monospace" font-size="12" fill="#a9b1d6">    Replaced an $800/mo SaaS. 10+ modules, used daily by the sales team.</text>
+  <text x="90" y="362" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="700" fill="#7aa2f7">METRICS</text>
+  <text x="90" y="384" font-family="'IBM Plex Mono', monospace" font-size="12" fill="#9ece6a" style="filter:drop-shadow(0 0 6px rgba(158,206,106,0.4))">    90-day solo build  ·  10+ modules in production</text>
+
+  <!-- prompt 3 + blinking cursor -->
+  <text x="90" y="424" font-family="'IBM Plex Mono', monospace" font-size="13" fill="#7aa2f7">shravan@portfolio:~$</text>
+  <rect x="353" y="410" width="8" height="16" fill="#7aa2f7" opacity="0.9"/>
+
+  <!-- statusbar -->
+  <rect x="60" y="538" width="1080" height="40" rx="0" fill="#13141f"/>
+  <rect x="60" y="538" width="1080" height="1" fill="#2f3549"/>
+  <text x="82" y="564" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="700" fill="#9ece6a">◉ available for work</text>
+  <text x="860" y="564" font-family="'IBM Plex Mono', monospace" font-size="10" fill="#565f89">theme: tokyo</text>
+  <text x="970" y="564" font-family="'IBM Plex Mono', monospace" font-size="10" fill="#2f3549">│</text>
+  <text x="984" y="564" font-family="'IBM Plex Mono', monospace" font-size="10" fill="#565f89">2026</text>
+</svg>
