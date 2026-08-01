@@ -14,6 +14,8 @@
 	let clockTime    = $state('');
 	let matrixActive = $state(false);
 	let matrixCanvas = $state<HTMLCanvasElement | null>(null);
+	let topActive    = $state(false);
+	let topTick      = $state(0);
 
 	let inputEl:  HTMLInputElement;
 	let outputEl: HTMLElement;
@@ -70,6 +72,16 @@
 				matrixActive = false;
 			}, 4000);
 			return () => { cancelAnimationFrame(frame); clearTimeout(timer); };
+		}
+	});
+
+	// ── Top process viewer ────────────────────────────────────────────────────
+	$effect(() => {
+		if (topActive) {
+			const iv = setInterval(() => { topTick++; }, 1000);
+			const quit = (e: KeyboardEvent) => { if (e.key === 'q' || e.key === 'Escape') { clearInterval(iv); topActive = false; } };
+			window.addEventListener('keydown', quit);
+			return () => { clearInterval(iv); window.removeEventListener('keydown', quit); };
 		}
 	});
 
@@ -146,9 +158,12 @@
 		'skills', 'status', 'contact', 'neofetch', 'matrix', 'clear', 'cls',
 		'exit', 'history', 'date', 'uname -a', 'experience', 'tree', 'schedule',
 		'git log', 'vim', 'cowsay hire me', 'fortune', 'alias', 'env', 'ps aux',
-		'ssh root@google.com', 'ping faang.com', 'ping google.com',
-		'curl wttr.in/trivandrum', 'cat resume', 'open resume', 'download resume',
-		'cat .gitconfig', 'share',
+		'top', 'htop', 'nmap localhost',
+		'diff expectations.txt reality.txt',
+		'curl api.github.com/users/sxrxvxnn', 'curl wttr.in/trivandrum',
+		'ssh shravan@google.com', 'ssh shravan@anthropic.com', 'ping faang.com',
+		'cat resume', 'open resume', 'download resume',
+		'cat .gitconfig', 'share', 'banner SHRAVAN', 'banner',
 		'sudo hire shravan', 'sudo make me a sandwich',
 		'theme gruvbox', 'theme tokyo', 'theme dracula',
 		'open github', 'open linkedin', 'open email',
@@ -659,13 +674,6 @@
 			{ t: 'blank' },
 		];
 
-		if (verb === 'ssh') return [
-			{ t: 'blank' },
-			{ t: 'out', text: `ssh: connect to host ${arg || 'localhost'} port 22: Connection refused`, dim: true },
-			{ t: 'out', text: 'Permission denied (publickey).', dim: true },
-			{ t: 'blank' },
-		];
-
 		if (verb === 'ping') {
 			const host = arg || 'localhost';
 			const isFaang = ['google','faang','meta','apple','amazon','netflix','microsoft','openai','anthropic'].some(h => host.includes(h));
@@ -891,6 +899,120 @@
 			{ t: 'blank' },
 		];
 
+		// ── top ──
+		if (cmd === 'top' || cmd === 'htop') {
+			topActive = true;
+			topTick   = 0;
+			return [];
+		}
+
+		// ── diff ──
+		if (cmd === 'diff expectations.txt reality.txt' || cmd === 'diff expectations reality') return [
+			{ t: 'blank' },
+			{ t: 'out', text: '--- expectations.txt', dim: true },
+			{ t: 'out', text: '+++ reality.txt', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '-  write some code, get a FAANG offer', dim: true },
+			{ t: 'out', text: '+  write some code, rewrite it, delete it, rewrite it again', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '-  "I\'ll just use a simple for loop"', dim: true },
+			{ t: 'out', text: '+  3 hours of Stack Overflow later', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '-  weekend to finish side project', dim: true },
+			{ t: 'out', text: '+  3 months and still not "done"', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '-  "it works on my machine" → CI passes first try', dim: true },
+			{ t: 'out', text: '+  "it works on my machine" → CI has 47 errors', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '+  shipped anyway. it\'s fine.', accent: true },
+			{ t: 'blank' },
+		];
+
+		// ── curl api.github.com ──
+		if (cmd === 'curl api.github.com/users/sxrxvxnn' || cmd.includes('api.github.com')) return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'HTTP/2 200', green: true },
+			{ t: 'out', text: 'content-type: application/json', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '{', dim: true },
+			{ t: 'out', text: '  "login":       "sxrxvxnn",' },
+			{ t: 'out', text: '  "name":        "Shravan Omanakuttan",' },
+			{ t: 'out', text: '  "company":     "@beagle-security",' },
+			{ t: 'out', text: '  "location":    "Trivandrum, India",' },
+			{ t: 'out', text: '  "email":       "shravanomanakuttan@gmail.com",' },
+			{ t: 'out', text: '  "bio":         "SWE Intern · building Sonar · available 2026",' },
+			{ t: 'out', text: '  "public_repos": 12,' },
+			{ t: 'out', text: '  "followers":   847,' },
+			{ t: 'out', text: '  "hireable":    true,', green: true },
+			{ t: 'out', text: '  "open_to":     ["internship", "full-time", "relocation"]', green: true },
+			{ t: 'out', text: '}', dim: true },
+			{ t: 'blank' },
+		];
+
+		// ── ssh FAANG easter egg ──
+		if (verb === 'ssh') {
+			const host = arg || 'localhost';
+			const isFaang = ['google','meta','amazon','apple','netflix','microsoft','openai','anthropic'].some(h => host.includes(h));
+			const co = host.split('@')[1]?.split('.')[0] ?? host;
+			if (isFaang) return [
+				{ t: 'blank' },
+				{ t: 'out', text: `ssh: connect to ${host} port 22...`, dim: true },
+				{ t: 'out', text: 'Warning: Permanently added host to known hosts (ECDSA).', dim: true },
+				{ t: 'out', text: `${host}'s password: ••••••••••••••••`, dim: true },
+				{ t: 'blank' },
+				{ t: 'out', text: `Last login: Fri Aug 1 2026 from portfolio.vercel.app` },
+				{ t: 'blank' },
+				{ t: 'out', text: `  Welcome to ${co.charAt(0).toUpperCase()+co.slice(1)} HQ, Shravan.`, accent: true },
+				{ t: 'out', text: `  We've been expecting you.` },
+				{ t: 'blank' },
+				{ t: 'out', text: '  (jk. but the offer stands. open email.)', dim: true },
+				{ t: 'out', text: '  Connection closed by remote host.', dim: true },
+				{ t: 'blank' },
+			];
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: `ssh: connect to host ${host} port 22: Connection refused`, dim: true },
+				{ t: 'out', text: 'Permission denied (publickey).', dim: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── nmap ──
+		if (cmd.startsWith('nmap')) return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'Starting Nmap 7.95 ( shravan-os/nmap )', dim: true },
+			{ t: 'out', text: `Nmap scan report for localhost (127.0.0.1)` },
+			{ t: 'out', text: 'Host is up (0.00012s latency).', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: 'PORT      STATE  SERVICE', dim: true },
+			{ t: 'out', text: '8000/tcp  open   sonar-backend (fastapi)', green: true },
+			{ t: 'out', text: '5173/tcp  open   sonar-frontend (vite)', green: true },
+			{ t: 'out', text: '5432/tcp  open   postgresql', yellow: true },
+			{ t: 'out', text: '3000/tcp  open   chrome-ext-devtools' },
+			{ t: 'out', text: '11435/tcp open   llm-daemon (groq)', yellow: true },
+			{ t: 'out', text: '2222/tcp  closed sleep-scheduler', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: 'Nmap done: 1 host up, 5 open ports scanned in 0.04s', dim: true },
+			{ t: 'blank' },
+		];
+
+		// ── banner ──
+		if (verb === 'banner') {
+			const text = (arg || 'SHRAVAN').toUpperCase().slice(0, 20);
+			const pad  = 2;
+			const inner = ' '.repeat(pad) + text + ' '.repeat(pad);
+			const bar   = '═'.repeat(inner.length + 2);
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: `  ╔${bar}╗`, accent: true },
+				{ t: 'out', text: `  ║ ${' '.repeat(inner.length)} ║`, dim: true },
+				{ t: 'out', text: `  ║ ${inner} ║`, accent: true },
+				{ t: 'out', text: `  ║ ${' '.repeat(inner.length)} ║`, dim: true },
+				{ t: 'out', text: `  ╚${bar}╝`, accent: true },
+				{ t: 'blank' },
+			];
+		}
+
 		return [
 			{ t: 'blank' },
 			{ t: 'out', text: `command not found: ${raw.trim()}` },
@@ -1017,8 +1139,30 @@
 		tick();
 		const clockInterval = setInterval(tick, 1000);
 
+		// mobile swipe up/down for history
+		let touchStartY = 0;
+		const onTouchStart = (e: TouchEvent) => { touchStartY = e.touches[0].clientY; };
+		const onTouchEnd   = (e: TouchEvent) => {
+			if (!isMobile || busy) return;
+			const dy = touchStartY - e.changedTouches[0].clientY;
+			if (Math.abs(dy) < 40) return;
+			if (dy > 0) {
+				histIdx    = Math.min(histIdx + 1, cmdHistory.length - 1);
+				inputValue = cmdHistory[histIdx] ?? '';
+			} else {
+				histIdx    = Math.max(histIdx - 1, -1);
+				inputValue = histIdx === -1 ? '' : cmdHistory[histIdx];
+			}
+		};
+		window.addEventListener('touchstart', onTouchStart, { passive: true });
+		window.addEventListener('touchend',   onTouchEnd,   { passive: true });
+
 		autoPlay(isReturning);
-		return () => clearInterval(clockInterval);
+		return () => {
+			clearInterval(clockInterval);
+			window.removeEventListener('touchstart', onTouchStart);
+			window.removeEventListener('touchend',   onTouchEnd);
+		};
 	});
 </script>
 
@@ -1039,6 +1183,28 @@
 	<!-- matrix overlay -->
 	{#if matrixActive}
 		<canvas class="matrix-canvas" bind:this={matrixCanvas}></canvas>
+	{/if}
+
+	<!-- top overlay -->
+	{#if topActive}
+	{@const t = topTick}
+	{@const cpu1  = (12.4 + Math.sin(t * 0.7) * 3).toFixed(1)}
+	{@const cpu2  = (8.1  + Math.cos(t * 0.5) * 2).toFixed(1)}
+	{@const cpu3  = (34.7 + Math.sin(t * 1.1) * 5).toFixed(1)}
+	{@const now   = new Date().toLocaleTimeString('en-US', { hour12: false })}
+	<div class="top-overlay" role="dialog" aria-label="top">
+		<div class="top-hdr">shravan-os top — {now} — load: {(1.2 + Math.sin(t) * 0.3).toFixed(2)}  press q to quit</div>
+		<div class="top-row top-col-hdr">USER       PID  %CPU  %MEM  COMMAND</div>
+		<div class="top-row dim">shravan      1   0.0   0.1  init: shravan-os</div>
+		<div class="top-row grn">shravan    142  {String(cpu1).padStart(4)}   2.3  sonar-backend (fastapi)</div>
+		<div class="top-row grn">shravan    143  {String(cpu2).padStart(4)}   3.1  sonar-frontend (vite)</div>
+		<div class="top-row">shravan    209   0.3   0.2  chrome-ext (mv3 service-worker)</div>
+		<div class="top-row ylw">shravan    314  {String(cpu3).padStart(4)}   4.2  groq-inference (llm-calls)</div>
+		<div class="top-row dim">shravan    411   0.0   0.1  coffee-daemon (idle)</div>
+		<div class="top-row dim">shravan    512   0.0   0.0  sleep-scheduler (ZOMBIE)</div>
+		<div class="top-row acc">shravan    847  99.9  12.0  ambition (unkillable)</div>
+		<div class="top-foot">q: quit · k: kill process (lol) · r: renice</div>
+	</div>
 	{/if}
 
 	<!-- output area -->
@@ -1154,6 +1320,37 @@
 	.matrix-canvas {
 		position: fixed; inset: 0;
 		z-index: 50; pointer-events: none;
+	}
+
+	/* ── top overlay ─────────────────────────────────────── */
+	.top-overlay {
+		position: fixed; inset: 0;
+		z-index: 60;
+		background: #1d2021;
+		padding: 0;
+		display: flex; flex-direction: column;
+		font-size: clamp(12px, 1.2vw, 14px);
+	}
+	.top-hdr {
+		background: var(--accent); color: #1d2021;
+		font-weight: 700; padding: 3px 16px;
+		letter-spacing: 0.04em; font-size: 12px;
+	}
+	.top-col-hdr {
+		color: #a89984; padding: 4px 16px; border-bottom: 1px solid #3c3836;
+	}
+	.top-row {
+		color: #ebdbb2; padding: 3px 16px;
+		white-space: pre;
+	}
+	.top-row.dim  { color: #665c54; }
+	.top-row.grn  { color: var(--green); }
+	.top-row.ylw  { color: #d79921; }
+	.top-row.acc  { color: var(--accent); font-weight: 700; }
+	.top-foot {
+		margin-top: auto;
+		background: #3c3836; color: #a89984;
+		padding: 3px 16px; font-size: 11px;
 	}
 
 	.output {
