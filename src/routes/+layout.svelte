@@ -106,9 +106,7 @@
 	<div class="noise-overlay" style="background-image: url({noiseUrl})"></div>
 {/if}
 
-<div class="site-wrap">
-	{@render children()}
-</div>
+{@render children()}
 
 <style>
 	:global(*, *::before, *::after) { box-sizing: border-box; margin: 0; padding: 0; }
@@ -127,7 +125,6 @@
 		overflow-x: hidden;
 		overflow-y: auto;
 		overscroll-behavior: none;
-		-webkit-overflow-scrolling: touch;
 	}
 
 	:global(a) { color: inherit; }
@@ -156,8 +153,4 @@
 		opacity: 0.7;
 	}
 
-	.site-wrap {
-		position: relative;
-		z-index: 2;
-	}
 </style>
