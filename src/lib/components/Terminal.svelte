@@ -1111,10 +1111,13 @@
 
 	// ── Auto-play boot sequence ────────────────────────────────────────────────
 	async function awaitPreloader() {
-		// Resolves the moment layout sets preloaderDone=true (or immediately if already done)
+		// Resolves when preloaderDone fires, or after 5.6s max (Safari failsafe)
 		return new Promise<void>(resolve => {
-			const unsub = preloaderDone.subscribe(v => {
-				if (v) { unsub(); resolve(); }
+			let done = false;
+			let unsub: (() => void) | null = null;
+			const timeout = setTimeout(() => { if (!done) { done = true; unsub?.(); resolve(); } }, 5600);
+			unsub = preloaderDone.subscribe(v => {
+				if (v && !done) { done = true; clearTimeout(timeout); unsub?.(); resolve(); }
 			});
 		});
 	}

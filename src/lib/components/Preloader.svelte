@@ -187,7 +187,13 @@
 		z-index: 9999;
 		background: #282828;
 		opacity: 1;
+		pointer-events: none;
 		transition: opacity 0.45s ease;
+		/* CSS-only nuclear fallback: auto-hide at 5.5s even if Svelte {#if} fails */
+		animation: preloader-nuke 0.5s ease 5.5s forwards;
 	}
 	.preloader.exit { opacity: 0; }
+	@keyframes preloader-nuke {
+		to { opacity: 0; visibility: hidden; }
+	}
 </style>

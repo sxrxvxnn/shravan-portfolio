@@ -19,8 +19,17 @@
 	}
 
 	onMount(() => {
-		// Failsafe: if Preloader never calls onDone, unblock terminal after 7s
-		const failsafe = setTimeout(() => { preloaderDone.set(true); }, 7000);
+		// Nuclear failsafe: if Svelte {#if !done} never fires in Safari,
+		// directly remove the preloader canvas from DOM after 5.5s and unblock terminal.
+		const failsafe = setTimeout(() => {
+			const el = document.querySelector('.preloader') as HTMLElement | null;
+			if (el) {
+				el.style.transition = 'opacity 0.4s ease';
+				el.style.opacity = '0';
+				setTimeout(() => { try { el.remove(); } catch {} }, 450);
+			}
+			preloaderDone.set(true);
+		}, 5500);
 
 		const c = document.createElement('canvas');
 		c.width = c.height = 256;
