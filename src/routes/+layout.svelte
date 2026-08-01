@@ -111,6 +111,8 @@
 		background: #282828;
 		overflow-x: hidden;
 		overflow-y: auto;
+		overscroll-behavior: none;
+		-webkit-overflow-scrolling: touch;
 	}
 
 	:global(a) { color: inherit; }

@@ -22,9 +22,12 @@
 	let cmdHistory: string[] = [];
 	let histIdx = -1;
 
-	const PROMPT     = 'shravan@portfolio:~$';
-	const THEME_KEY  = 'shravan-theme';
+	const PROMPT      = 'shravan@portfolio:~$';
+	const THEME_KEY   = 'shravan-theme';
 	const VISITED_KEY = 'shravan-visited';
+	const LINES_KEY   = 'shravan-lines';
+	const PH_ID_KEY   = 'shravan-ph-id';
+	const PH_TOKEN    = 'phc_uxhjJtguK9QvxBLaMTRjpA5LHxFFLGCCBNsVYBo4Awgm';
 
 	type Theme = { accent: string; glow: string; green: string; greenGlow: string; name: string };
 	const THEMES: Record<string, Theme> = {
@@ -84,6 +87,37 @@
 			return () => { clearInterval(iv); window.removeEventListener('keydown', quit); };
 		}
 	});
+
+	// ── Scrollback persistence ────────────────────────────────────────────────
+	$effect(() => {
+		if (!busy && lines.length > 0) {
+			try { localStorage.setItem(LINES_KEY, JSON.stringify(lines.slice(-60))); } catch {}
+		}
+	});
+
+	// ── PostHog analytics ─────────────────────────────────────────────────────
+	function trackCommand(cmd: string) {
+		try {
+			let id = localStorage.getItem(PH_ID_KEY);
+			if (!id) { id = crypto.randomUUID(); localStorage.setItem(PH_ID_KEY, id); }
+			fetch('https://us.i.posthog.com/capture/', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					api_key: PH_TOKEN,
+					event: 'terminal_command',
+					distinct_id: id,
+					properties: {
+						command: cmd,
+						theme: currentTheme.name,
+						is_mobile: isMobile,
+						$current_url: window.location.href,
+						$screen_width: window.innerWidth,
+					}
+				})
+			}).catch(() => {});
+		} catch {}
+	}
 
 	// ── Helpers ───────────────────────────────────────────────────────────────
 	function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
@@ -163,7 +197,8 @@
 		'curl api.github.com/users/sxrxvxnn', 'curl wttr.in/trivandrum',
 		'ssh shravan@google.com', 'ssh shravan@anthropic.com', 'ping faang.com',
 		'cat resume', 'open resume', 'download resume',
-		'cat .gitconfig', 'share', 'banner SHRAVAN', 'banner',
+		'cat .gitconfig', 'cat .ssh/id_rsa', 'share', 'banner SHRAVAN', 'banner',
+		'mail I want to hire you', 'mail',
 		'sudo hire shravan', 'sudo make me a sandwich',
 		'theme gruvbox', 'theme tokyo', 'theme dracula',
 		'open github', 'open linkedin', 'open email',
@@ -996,6 +1031,40 @@
 			{ t: 'blank' },
 		];
 
+		// ── mail ──
+		if (verb === 'mail') {
+			const body = encodeURIComponent(arg || 'Hi Shravan, I came from your portfolio...');
+			const subject = encodeURIComponent('From Portfolio — Lets Talk');
+			window.location.href = `mailto:shravanomanakuttan@gmail.com?subject=${subject}&body=${body}`;
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: 'opening mail client...', green: true },
+				{ t: 'out', text: `  to: shravanomanakuttan@gmail.com`, dim: true },
+				{ t: 'out', text: `  body: ${arg || '(empty)'}`, dim: true },
+				{ t: 'blank' },
+				{ t: 'out', text: 'tip: mail <your message>  e.g.  mail I want to hire you', dim: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── cat .ssh/id_rsa ──
+		if (cmd === 'cat .ssh/id_rsa' || cmd === 'cat ~/.ssh/id_rsa' || cmd === 'cat /root/.ssh/id_rsa') return [
+			{ t: 'blank' },
+			{ t: 'out', text: '-----BEGIN RSA PRIVATE KEY-----', dim: true },
+			{ t: 'out', text: 'Proc-Type: 4,ENCRYPTED', dim: true },
+			{ t: 'out', text: 'DEK-Info: AES-128-CBC,3F17A22BE6B97C6E3F3D4F5E7C8A9B0D', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: 'MIIEpAIBAAKCAQEA2nAFSH4VWN2L8mX9Qq3vZT1K6pRwY5mJf2NcD0vBs7ghIn', dim: true },
+			{ t: 'out', text: 'RaVQ8KfJzD3OoT2LhM1YcPwXb6UeH4mZiA9NqvF5kGjR3sXtW0VYdE8BnKLHrQ', dim: true },
+			{ t: 'out', text: '7MjZpS6cIfW2sD4NtAy0X1kVHR2LuQ9vCeXd5mT3A6bY8NjW4RkHpB1EcLz7k', dim: true },
+			{ t: 'out', text: '// ... (obviously fake. hire the engineer instead.)', accent: true },
+			{ t: 'out', text: 'GmP4VrB9X2cN5wY1ThQ8MpA3DnE6IFoS0JKWtRU+jBsD/HdlZ=', dim: true },
+			{ t: 'out', text: '-----END RSA PRIVATE KEY-----', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: 'this key is fake. but sonar is real.  →  cat sonar', dim: true },
+			{ t: 'blank' },
+		];
+
 		// ── banner ──
 		if (verb === 'banner') {
 			const text = (arg || 'SHRAVAN').toUpperCase().slice(0, 20);
@@ -1041,6 +1110,30 @@
 
 	// ── Auto-play boot sequence ────────────────────────────────────────────────
 	async function autoPlay(isReturning: boolean) {
+		// ── RETURNING VISITOR: instant load, restore session ──────────────────
+		if (isReturning) {
+			try {
+				const saved = localStorage.getItem(LINES_KEY);
+				if (saved) lines = JSON.parse(saved);
+			} catch {}
+			await push(
+				{ t: 'blank' },
+				{ t: 'out', text: '  welcome back.', accent: true },
+				{ t: 'out', text: '  help · help --recruiter · cat sonar', dim: true },
+				{ t: 'blank' },
+			);
+			busy = false;
+			await tick();
+			if (!isMobile) inputEl?.focus();
+
+			// handle ?cmd= on return visits too
+			const p = new URLSearchParams(window.location.search);
+			const c = p.get('cmd');
+			if (c) { await sleep(200); await typeCommand(c, 42); await push(...runCommand(c)); }
+			return;
+		}
+
+		// ── FIRST VISIT: sync with preloader animation ────────────────────────
 		await sleep(6000);
 		await bootLines([
 			{ t: 'blank' },
@@ -1052,9 +1145,7 @@
 			{ t: 'out', text: '  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝╚═╝  ╚══╝', dim: true },
 			{ t: 'blank' },
 			{ t: 'out', text: '  shravan-os v2.0.0  ·  sveltekit · three.js · gsap', dim: true },
-			isReturning
-				? { t: 'out', text: '  welcome back.', accent: true }
-				: { t: 'out', text: '  type  help  ·  help --recruiter  if you\'re hiring', dim: true },
+			{ t: 'out', text: '  type  help  ·  help --recruiter  if you\'re hiring', dim: true },
 			{ t: 'blank' },
 		], 48);
 
@@ -1070,7 +1161,6 @@
 		busy = false;
 		await tick();
 
-		// handle ?cmd= shareable URL
 		const urlParams = new URLSearchParams(window.location.search);
 		const cmdParam  = urlParams.get('cmd');
 		if (cmdParam) {
@@ -1096,6 +1186,7 @@
 		}
 		push({ t: 'prompt', cmd });
 		push(...runCommand(cmd));
+		trackCommand(cmd.toLowerCase());
 		inputValue = '';
 	}
 
@@ -1254,6 +1345,18 @@
 		/>
 	{/if}
 
+	<!-- mobile quick commands chips -->
+	{#if isMobile && !busy}
+		<div class="mob-chips" role="toolbar" aria-label="Quick commands">
+			{#each ['help --recruiter', 'whoami', 'cat sonar', 'skills', 'contact', 'cat resume', 'experience'] as chip}
+				<button
+					class="chip"
+					onclick={() => { inputValue = chip; submit(); }}
+				>{chip}</button>
+			{/each}
+		</div>
+	{/if}
+
 	<!-- mobile visible input bar -->
 	{#if isMobile && !busy}
 		<div class="mob-bar">
@@ -1267,6 +1370,8 @@
 				autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck={false}
 				aria-label="Terminal input"
 			/>
+			<button class="mob-nav" onclick={() => { histIdx = Math.min(histIdx+1, cmdHistory.length-1); inputValue = cmdHistory[histIdx] ?? ''; }} aria-label="Previous command">↑</button>
+			<button class="mob-nav" onclick={() => { histIdx = Math.max(histIdx-1, -1); inputValue = histIdx === -1 ? '' : cmdHistory[histIdx]; }} aria-label="Next command">↓</button>
 			<button class="mob-send" onclick={submit} aria-label="Run command">↵</button>
 		</div>
 	{/if}
@@ -1362,7 +1467,12 @@
 	.output::-webkit-scrollbar { display: none; }
 
 	/* mobile output */
-	.is-mobile .output { padding: 24px 18px 16px; font-size: 13px; }
+	.is-mobile .output {
+		padding: 16px 14px 12px;
+		font-size: 13px;
+		line-height: 1.65;
+		overscroll-behavior: none;
+	}
 
 	.ln       { color: #ebdbb2; white-space: pre-wrap; word-break: break-word; }
 	.ln.dim   { color: #a89984; }
@@ -1400,10 +1510,42 @@
 		width: 1px; height: 1px; top: 0; left: 0;
 	}
 
+	/* mobile chips */
+	.mob-chips {
+		display: flex; gap: 6px;
+		padding: 6px 10px;
+		background: #1d2021;
+		border-top: 1px solid #3c3836;
+		overflow-x: auto; overflow-y: hidden;
+		scrollbar-width: none;
+		-webkit-overflow-scrolling: touch;
+		position: relative; z-index: 10;
+	}
+	.mob-chips::-webkit-scrollbar { display: none; }
+	.chip {
+		flex-shrink: 0;
+		background: #3c3836;
+		border: 1px solid #504945;
+		color: #a89984;
+		font-family: inherit; font-size: 11px;
+		padding: 4px 10px;
+		border-radius: 3px;
+		cursor: pointer;
+		white-space: nowrap;
+		transition: background 0.12s, color 0.12s;
+		-webkit-tap-highlight-color: transparent;
+	}
+	.chip:active {
+		background: rgba(250,189,47,0.15);
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+
 	/* mobile input bar */
 	.mob-bar {
-		display: flex; align-items: center; gap: 10px;
-		padding: 10px 16px;
+		display: flex; align-items: center; gap: 6px;
+		padding: 8px 10px;
+		padding-bottom: max(8px, env(safe-area-inset-bottom));
 		background: #1d2021;
 		border-top: 1px solid #3c3836;
 		position: relative; z-index: 10;
@@ -1415,23 +1557,36 @@
 	}
 	.mob-input {
 		flex: 1; background: none; border: none; outline: none;
-		color: #ebdbb2; font-family: inherit; font-size: 13px;
+		color: #ebdbb2; font-family: inherit;
+		font-size: 16px; /* 16px prevents iOS zoom-on-focus */
 		caret-color: var(--accent);
+		min-width: 0;
 	}
 	.mob-input::placeholder { color: #665c54; }
+	.mob-nav {
+		background: none; border: 1px solid #3c3836;
+		color: #665c54; padding: 5px 8px;
+		border-radius: 3px; font-family: inherit; font-size: 13px;
+		cursor: pointer; flex-shrink: 0;
+		-webkit-tap-highlight-color: transparent;
+		transition: color 0.12s;
+	}
+	.mob-nav:active { color: var(--accent); border-color: var(--accent); }
 	.mob-send {
 		background: none; border: 1px solid var(--accent);
-		color: var(--accent); padding: 5px 12px;
+		color: var(--accent); padding: 5px 11px;
 		border-radius: 4px; font-family: inherit; font-size: 13px;
 		cursor: pointer; flex-shrink: 0;
-		transition: background 0.15s;
+		-webkit-tap-highlight-color: transparent;
+		transition: background 0.12s;
 	}
-	.mob-send:active { background: rgba(250,189,47,0.15); }
+	.mob-send:active { background: rgba(250,189,47,0.18); }
 
 	/* statusbar */
 	.statusbar {
 		display: flex; align-items: center; gap: 10px;
-		height: 26px; padding: 0 16px;
+		min-height: 26px;
+		padding: 0 16px;
 		background: #1d2021;
 		border-top: 1px solid #3c3836;
 		font-size: 11.5px; font-weight: 700;
