@@ -15,8 +15,23 @@
 	let clockTime    = $state('');
 	let matrixActive = $state(false);
 	let matrixCanvas = $state<HTMLCanvasElement | null>(null);
-	let topActive    = $state(false);
-	let topTick      = $state(0);
+	let topActive      = $state(false);
+	let topTick        = $state(0);
+	let glitchActive   = $state(false);
+	let typetestActive = $state(false);
+	let typetestTarget = '';
+	let typetestStart  = 0;
+
+	const TYPETEST_SENTENCES = [
+		'shravan builds things that work before the deadline hits',
+		'ninety days and ten modules later sonar was born',
+		'the best code is the code that ships to production',
+		'python until 2am deploy at 9am repeat until hired',
+		'replaced an eight hundred dollar saas tool in ninety days solo',
+		'write code that your future self will actually understand',
+		'fastapi and react walk into a bar sonar exits with a job offer',
+		'shipping beats perfection but shipping broken things is worse',
+	];
 
 	let inputEl:  HTMLInputElement;
 	let outputEl: HTMLElement;
@@ -30,13 +45,60 @@
 	const PH_ID_KEY   = 'shravan-ph-id';
 	const PH_TOKEN    = 'phc_uxhjJtguK9QvxBLaMTRjpA5LHxFFLGCCBNsVYBo4Awgm';
 
-	type Theme = { accent: string; glow: string; green: string; greenGlow: string; name: string };
+	type Theme = {
+		name: string; accent: string; glow: string; green: string; greenGlow: string;
+		bg: string; fg: string; dim: string; statusBg: string; border: string;
+	};
 	const THEMES: Record<string, Theme> = {
-		gruvbox: { accent: '#fabd2f', glow: 'rgba(250,189,47,0.45)',  green: '#b8bb26', greenGlow: 'rgba(184,187,38,0.4)',  name: 'gruvbox' },
-		tokyo:   { accent: '#7aa2f7', glow: 'rgba(122,162,247,0.45)', green: '#9ece6a', greenGlow: 'rgba(158,206,106,0.4)', name: 'tokyo'   },
-		dracula: { accent: '#ff79c6', glow: 'rgba(255,121,198,0.45)', green: '#50fa7b', greenGlow: 'rgba(80,250,123,0.4)',  name: 'dracula' },
+		gruvbox:               { name:'gruvbox',               bg:'#282828', fg:'#ebdbb2', dim:'#a89984', statusBg:'#1d2021', border:'#3c3836', accent:'#fabd2f', glow:'rgba(250,189,47,0.45)',   green:'#b8bb26', greenGlow:'rgba(184,187,38,0.4)'  },
+		dracula:               { name:'dracula',               bg:'#282a36', fg:'#f8f8f2', dim:'#6272a4', statusBg:'#21222c', border:'#44475a', accent:'#ff79c6', glow:'rgba(255,121,198,0.45)',  green:'#50fa7b', greenGlow:'rgba(80,250,123,0.4)'  },
+		tokyo:                 { name:'tokyo night',           bg:'#1a1b26', fg:'#a9b1d6', dim:'#565f89', statusBg:'#16161e', border:'#292e42', accent:'#7aa2f7', glow:'rgba(122,162,247,0.45)',  green:'#9ece6a', greenGlow:'rgba(158,206,106,0.4)' },
+		nord:                  { name:'nord',                  bg:'#2e3440', fg:'#d8dee9', dim:'#4c566a', statusBg:'#242831', border:'#3b4252', accent:'#88c0d0', glow:'rgba(136,192,208,0.45)',  green:'#a3be8c', greenGlow:'rgba(163,190,140,0.4)' },
+		'catppuccin-mocha':    { name:'catppuccin mocha',      bg:'#1e1e2e', fg:'#cdd6f4', dim:'#6c7086', statusBg:'#181825', border:'#313244', accent:'#cba6f7', glow:'rgba(203,166,247,0.45)',  green:'#a6e3a1', greenGlow:'rgba(166,227,161,0.4)' },
+		'catppuccin-macchiato':{ name:'catppuccin macchiato',  bg:'#24273a', fg:'#cad3f5', dim:'#6e738d', statusBg:'#1e2030', border:'#363a4f', accent:'#c6a0f6', glow:'rgba(198,160,246,0.45)',  green:'#a6da95', greenGlow:'rgba(166,218,149,0.4)' },
+		'catppuccin-latte':    { name:'catppuccin latte',      bg:'#eff1f5', fg:'#4c4f69', dim:'#9ca0b0', statusBg:'#e6e9ef', border:'#ccd0da', accent:'#8839ef', glow:'rgba(136,57,239,0.45)',   green:'#40a02b', greenGlow:'rgba(64,160,43,0.4)'  },
+		'one-dark':            { name:'one dark',              bg:'#282c34', fg:'#abb2bf', dim:'#5c6370', statusBg:'#21252b', border:'#3e4451', accent:'#61afef', glow:'rgba(97,175,239,0.45)',   green:'#98c379', greenGlow:'rgba(152,195,121,0.4)' },
+		'rose-pine':           { name:'rose pine',             bg:'#191724', fg:'#e0def4', dim:'#6e6a86', statusBg:'#120f20', border:'#26233a', accent:'#c4a7e7', glow:'rgba(196,167,231,0.45)',  green:'#31748f', greenGlow:'rgba(49,116,143,0.4)'  },
+		'rose-pine-moon':      { name:'rose pine moon',        bg:'#232136', fg:'#e0def4', dim:'#6e6a86', statusBg:'#1a1826', border:'#2a273f', accent:'#eb6f92', glow:'rgba(235,111,146,0.45)',  green:'#3e8fb0', greenGlow:'rgba(62,143,176,0.4)'  },
+		kanagawa:              { name:'kanagawa',              bg:'#1f1f28', fg:'#dcd7ba', dim:'#727169', statusBg:'#16161d', border:'#2a2a37', accent:'#7e9cd8', glow:'rgba(126,156,216,0.45)',  green:'#98bb6c', greenGlow:'rgba(152,187,108,0.4)' },
+		everforest:            { name:'everforest',            bg:'#2d353b', fg:'#d3c6aa', dim:'#7a8478', statusBg:'#272e33', border:'#3d484d', accent:'#a7c080', glow:'rgba(167,192,128,0.45)',  green:'#83c092', greenGlow:'rgba(131,192,146,0.4)' },
+		matrix:                { name:'matrix',                bg:'#0d0d0d', fg:'#00ff41', dim:'#008f11', statusBg:'#001100', border:'#003b00', accent:'#00ff41', glow:'rgba(0,255,65,0.45)',     green:'#00cc33', greenGlow:'rgba(0,204,51,0.4)'    },
+		cyberpunk:             { name:'cyberpunk',             bg:'#0d0221', fg:'#00f0ff', dim:'#6b4e71', statusBg:'#08010f', border:'#1a0a3c', accent:'#ff00c1', glow:'rgba(255,0,193,0.45)',    green:'#00f0ff', greenGlow:'rgba(0,240,255,0.4)'   },
+		synthwave:             { name:'synthwave',             bg:'#2b213a', fg:'#f4f4ed', dim:'#7b6e8f', statusBg:'#1e1628', border:'#3d2d54', accent:'#ff6ac1', glow:'rgba(255,106,193,0.45)',  green:'#72f1b8', greenGlow:'rgba(114,241,184,0.4)' },
+		serika:                { name:'serika dark',           bg:'#323437', fg:'#d1d0c5', dim:'#646669', statusBg:'#2c2e31', border:'#3c3f42', accent:'#e2b714', glow:'rgba(226,183,20,0.45)',   green:'#d1d0c5', greenGlow:'rgba(209,208,197,0.4)' },
+		monokai:               { name:'monokai',               bg:'#272822', fg:'#f8f8f2', dim:'#75715e', statusBg:'#1e1f1c', border:'#3e3d32', accent:'#f92672', glow:'rgba(249,38,114,0.45)',   green:'#a6e22e', greenGlow:'rgba(166,226,46,0.4)'  },
+		solarized:             { name:'solarized dark',        bg:'#002b36', fg:'#839496', dim:'#586e75', statusBg:'#001e25', border:'#073642', accent:'#268bd2', glow:'rgba(38,139,210,0.45)',   green:'#859900', greenGlow:'rgba(133,153,0,0.4)'   },
+		'ayu-dark':            { name:'ayu dark',              bg:'#0b0e14', fg:'#bfbdb6', dim:'#4d5566', statusBg:'#070a10', border:'#1a1e28', accent:'#ff8f40', glow:'rgba(255,143,64,0.45)',   green:'#aad94c', greenGlow:'rgba(170,217,76,0.4)'  },
+		coral:                 { name:'coral',                 bg:'#121212', fg:'#f5f5f5', dim:'#888888', statusBg:'#0a0a0a', border:'#1e1e1e', accent:'#ff7477', glow:'rgba(255,116,119,0.45)',  green:'#73c991', greenGlow:'rgba(115,201,145,0.4)' },
+		gruvbox_light:         { name:'gruvbox light',         bg:'#fbf1c7', fg:'#3c3836', dim:'#a89984', statusBg:'#ebdbb2', border:'#d5c4a1', accent:'#d65d0e', glow:'rgba(214,93,14,0.45)',   green:'#79740e', greenGlow:'rgba(121,116,14,0.4)'  },
 	};
 	let currentTheme = $state(THEMES.gruvbox);
+
+	type Font = { family: string; display: string; url?: string };
+	const FONTS: Record<string, Font> = {
+		'jetbrains':     { family: '"JetBrains Mono","IBM Plex Mono",monospace', display: 'JetBrains Mono' },
+		'fira-code':     { family: '"Fira Code",monospace',       display: 'Fira Code',       url: 'https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap' },
+		'ubuntu-mono':   { family: '"Ubuntu Mono",monospace',     display: 'Ubuntu Mono',     url: 'https://fonts.googleapis.com/css2?family=Ubuntu+Mono:wght@400;700&display=swap' },
+		'roboto-mono':   { family: '"Roboto Mono",monospace',     display: 'Roboto Mono',     url: 'https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap' },
+		'source-code':   { family: '"Source Code Pro",monospace', display: 'Source Code Pro', url: 'https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&display=swap' },
+		'ibm-plex':      { family: '"IBM Plex Mono",monospace',   display: 'IBM Plex Mono' },
+		'inconsolata':   { family: '"Inconsolata",monospace',     display: 'Inconsolata',     url: 'https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap' },
+		'space-mono':    { family: '"Space Mono",monospace',      display: 'Space Mono',      url: 'https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap' },
+		'anonymous-pro': { family: '"Anonymous Pro",monospace',   display: 'Anonymous Pro',   url: 'https://fonts.googleapis.com/css2?family=Anonymous+Pro:wght@400;700&display=swap' },
+	};
+	const FONT_KEY = 'shravan-font';
+	let currentFont = $state(FONTS['jetbrains']);
+
+	function loadFont(font: Font) {
+		if (font.url && !document.querySelector(`link[data-font-id="${font.display}"]`)) {
+			const link = document.createElement('link');
+			link.rel = 'stylesheet'; link.href = font.url;
+			link.setAttribute('data-font-id', font.display);
+			document.head.appendChild(link);
+		}
+		currentFont = font;
+		try { localStorage.setItem(FONT_KEY, Object.keys(FONTS).find(k => FONTS[k] === font) ?? 'jetbrains'); } catch {}
+	}
 
 	// Konami code tracker
 	const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
@@ -201,7 +263,17 @@
 		'cat .gitconfig', 'cat .ssh/id_rsa', 'share', 'banner SHRAVAN', 'banner',
 		'mail I want to hire you', 'mail',
 		'sudo hire shravan', 'sudo make me a sandwich',
-		'theme gruvbox', 'theme tokyo', 'theme dracula',
+		'theme list', 'theme random',
+		'theme gruvbox', 'theme tokyo', 'theme dracula', 'theme nord',
+		'theme catppuccin-mocha', 'theme catppuccin-macchiato', 'theme catppuccin-latte',
+		'theme one-dark', 'theme rose-pine', 'theme rose-pine-moon', 'theme kanagawa',
+		'theme everforest', 'theme matrix', 'theme cyberpunk', 'theme synthwave',
+		'theme serika', 'theme monokai', 'theme solarized', 'theme ayu-dark',
+		'theme coral', 'theme gruvbox_light',
+		'font', 'font list',
+		'font jetbrains', 'font fira-code', 'font ubuntu-mono', 'font roboto-mono',
+		'font source-code', 'font ibm-plex', 'font inconsolata', 'font space-mono', 'font anonymous-pro',
+		'typetest', 'tt', 'glitch', 'hack',
 		'open github', 'open linkedin', 'open email',
 		'man shravan', 'man help', 'man ls', 'man cat', 'man git',
 		'export HIRED=true',
@@ -248,7 +320,13 @@
 			{ t: 'out', text: '  schedule              book a call', dim: true },
 			{ t: 'out', text: '  cat resume            view CV', dim: true },
 			{ t: 'out', text: '  download resume       save PDF', dim: true },
-			{ t: 'out', text: '  theme <gruvbox|tokyo|dracula>', dim: true },
+			{ t: 'out', text: '  theme list            browse 21 themes', dim: true },
+			{ t: 'out', text: '  theme <name>          switch color theme', dim: true },
+			{ t: 'out', text: '  theme random          surprise me', dim: true },
+			{ t: 'out', text: '  font list             browse fonts', dim: true },
+			{ t: 'out', text: '  font <name>           switch terminal font', dim: true },
+			{ t: 'out', text: '  typetest  (or: tt)    typing speed test', dim: true },
+			{ t: 'out', text: '  glitch · hack         try them', dim: true },
 			{ t: 'out', text: '  man <cmd>             manual pages', dim: true },
 			{ t: 'out', text: '  ps aux · env · alias · fortune · share', dim: true },
 			{ t: 'out', text: '  date · history · clear · uname -a', dim: true },
@@ -767,13 +845,91 @@
 
 		// ── theme ──
 		if (verb === 'theme') {
+			const themeKeys = Object.keys(THEMES);
+			if (arg === 'list' || arg === 'ls') {
+				const rows: Line[] = [
+					{ t: 'blank' },
+					{ t: 'out', text: `THEMES  (${themeKeys.length} available)`, accent: true },
+					{ t: 'out', text: '──────────────────────────────────────────', dim: true },
+				];
+				for (const k of themeKeys) {
+					const active = k === (localStorage.getItem(THEME_KEY) ?? 'gruvbox');
+					rows.push({ t: 'out', text: `  ${(active ? '▶ ' : '  ')}${k.padEnd(24)} ${THEMES[k].name}`, ...(active ? { accent: true } : { dim: true }) });
+				}
+				rows.push({ t: 'blank' }, { t: 'out', text: '  theme <name>  ·  theme random', dim: true }, { t: 'blank' });
+				return rows;
+			}
+			if (arg === 'random') {
+				const k = themeKeys[Math.floor(Math.random() * themeKeys.length)];
+				currentTheme = THEMES[k];
+				try { localStorage.setItem(THEME_KEY, k); } catch {}
+				return [{ t: 'blank' }, { t: 'out', text: `theme → ${k}  (${THEMES[k].name})`, green: true }, { t: 'blank' }];
+			}
 			const t = THEMES[arg];
 			if (t) {
 				currentTheme = t;
-				if (typeof localStorage !== 'undefined') localStorage.setItem(THEME_KEY, arg);
-				return [{ t: 'blank' }, { t: 'out', text: `theme → ${arg}`, green: true }, { t: 'blank' }];
+				try { localStorage.setItem(THEME_KEY, arg); } catch {}
+				return [{ t: 'blank' }, { t: 'out', text: `theme → ${arg}  (${t.name})`, green: true }, { t: 'blank' }];
 			}
-			return [{ t: 'blank' }, { t: 'out', text: 'themes: gruvbox  tokyo  dracula', dim: true }, { t: 'blank' }];
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: `unknown theme: ${arg || '(none)'}`, dim: true },
+				{ t: 'out', text: '  theme list  to see all 21 themes', dim: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── font ──
+		if (verb === 'font') {
+			if (!arg || arg === 'list' || arg === 'ls') {
+				const rows: Line[] = [
+					{ t: 'blank' },
+					{ t: 'out', text: 'FONTS', accent: true },
+					{ t: 'out', text: '──────────────────────────────────────────', dim: true },
+				];
+				for (const [k, f] of Object.entries(FONTS)) {
+					const active = currentFont.display === f.display;
+					rows.push({ t: 'out', text: `  ${(active ? '▶ ' : '  ')}${k.padEnd(16)} ${f.display}`, ...(active ? { accent: true } : { dim: true }) });
+				}
+				rows.push({ t: 'blank' }, { t: 'out', text: '  font <name>  to switch', dim: true }, { t: 'blank' });
+				return rows;
+			}
+			const f = FONTS[arg];
+			if (f) {
+				loadFont(f);
+				return [{ t: 'blank' }, { t: 'out', text: `font → ${f.display}`, green: true }, { t: 'blank' }];
+			}
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: `unknown font: ${arg}`, dim: true },
+				{ t: 'out', text: '  font list  to see all fonts', dim: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── glitch ──
+		if (cmd === 'glitch') {
+			glitchActive = true;
+			setTimeout(() => { glitchActive = false; }, 700);
+			return [{ t: 'blank' }, { t: 'out', text: 'gl1tch_m0d3.exe  [ACTIVATED]', accent: true }, { t: 'blank' }];
+		}
+
+		// ── typetest ──
+		if (cmd === 'typetest' || cmd === 'tt') {
+			const sentence = TYPETEST_SENTENCES[Math.floor(Math.random() * TYPETEST_SENTENCES.length)];
+			typetestTarget = sentence;
+			typetestStart  = Date.now();
+			typetestActive = true;
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: '  TYPING TEST', accent: true },
+				{ t: 'out', text: '  ─────────────────────────────────────────', dim: true },
+				{ t: 'blank' },
+				{ t: 'out', text: `  ${sentence}`, green: true },
+				{ t: 'blank' },
+				{ t: 'out', text: '  type the line above exactly, then enter', dim: true },
+				{ t: 'blank' },
+			];
 		}
 
 		// ── misc ──
@@ -1109,6 +1265,36 @@
 		];
 	}
 
+	// ── Hack easter egg ───────────────────────────────────────────────────────
+	async function runHack() {
+		busy = true;
+		const ip = `192.168.${Math.floor(Math.random()*254)+1}.${Math.floor(Math.random()*254)+1}`;
+		const steps: Array<{ text: string; dim?: boolean; green?: boolean; accent?: boolean; yellow?: boolean }> = [
+			{ text: `  [*] initiating exploit → ${ip}:22...`, dim: true },
+			{ text: '  [*] scanning open ports...', dim: true },
+			{ text: `  [+] port 22/tcp  open   ssh OpenSSH 9.3`, green: true },
+			{ text: `  [+] port 80/tcp  open   http nginx/1.25`, green: true },
+			{ text: `  [+] port 5432    open   postgresql`, green: true },
+			{ text: '  [*] running exploit CVE-2024-shravan...', dim: true },
+			{ text: '  [*] bypassing auth...', dim: true },
+			{ text: '  [+] root shell obtained', green: true },
+			{ text: `  [root@${ip}]# ls /home`, accent: true },
+			{ text: '      coffee-logs/   sonar-backend/   deploy-scripts/', dim: true },
+			{ text: `  [root@${ip}]# cat /etc/motd`, accent: true },
+			{ text: '      ┌──────────────────────────────────────┐', dim: true },
+			{ text: '      │  welcome. you found the terminal.    │', dim: true },
+			{ text: '      │  now  open email  and hire shravan.  │', accent: true },
+			{ text: '      └──────────────────────────────────────┘', dim: true },
+			{ text: '  [*] connection closed. mission complete.', dim: true },
+		];
+		for (const s of steps) {
+			await push({ t: 'out', ...s });
+			await sleep(Math.random() * 160 + 55);
+		}
+		await push({ t: 'blank' });
+		busy = false;
+	}
+
 	// ── Auto-play boot sequence ────────────────────────────────────────────────
 	async function awaitPreloader() {
 		// Resolves when preloaderDone fires, or after 5.6s max (Safari failsafe)
@@ -1190,21 +1376,50 @@
 	}
 
 	// ── Input handlers ────────────────────────────────────────────────────────
-	function submit() {
+	async function submit() {
 		if (busy || !inputValue.trim()) return;
-		const cmd = inputValue.trim();
-		cmdHistory = [cmd, ...cmdHistory.slice(0, 49)];
+		const raw = inputValue.trim();
+		const lc  = raw.toLowerCase();
+		inputValue = '';
+		cmdHistory = [raw, ...cmdHistory.slice(0, 49)];
 		histIdx    = -1;
-		const lc = cmd.toLowerCase();
-		if (lc === 'clear' || lc === 'cls') {
-			lines = [];
-			inputValue = '';
+
+		// typetest evaluation
+		if (typetestActive) {
+			typetestActive = false;
+			const mins = (Date.now() - typetestStart) / 60000;
+			const wordCount = typetestTarget.split(' ').length;
+			const wpm = Math.round(wordCount / mins);
+			const targetChars = typetestTarget.split('');
+			const inputChars  = raw.split('');
+			let correct = 0;
+			targetChars.forEach((c, i) => { if (inputChars[i] === c) correct++; });
+			const accuracy = Math.round((correct / targetChars.length) * 100);
+			const msg = accuracy === 100 && wpm > 60 ? '  flawless. you should work here.' : accuracy < 70 ? '  rough. try again: typetest' : '  not bad. try again: typetest';
+			await push(
+				{ t: 'prompt', cmd: raw.length > 44 ? raw.slice(0, 44) + '…' : raw },
+				{ t: 'blank' },
+				{ t: 'out', text: `  WPM: ${wpm}`, accent: true },
+				{ t: 'out', text: `  accuracy: ${accuracy}%`, ...(accuracy >= 90 ? { green: true } : { yellow: true }) },
+				{ t: 'out', text: msg, dim: true },
+				{ t: 'blank' },
+			);
+			trackCommand('typetest_submit');
 			return;
 		}
-		push({ t: 'prompt', cmd });
-		push(...runCommand(cmd));
-		trackCommand(cmd.toLowerCase());
-		inputValue = '';
+
+		if (lc === 'clear' || lc === 'cls') { lines = []; return; }
+
+		if (lc === 'hack' || lc.startsWith('hack ')) {
+			await push({ t: 'prompt', cmd: raw });
+			trackCommand('hack');
+			await runHack();
+			return;
+		}
+
+		await push({ t: 'prompt', cmd: raw });
+		await push(...runCommand(raw));
+		trackCommand(lc);
 	}
 
 	function onKey(e: KeyboardEvent) {
@@ -1235,6 +1450,9 @@
 		// restore saved theme
 		const savedTheme = localStorage.getItem(THEME_KEY);
 		if (savedTheme && THEMES[savedTheme]) currentTheme = THEMES[savedTheme];
+		// restore saved font
+		const savedFont = localStorage.getItem(FONT_KEY);
+		if (savedFont && FONTS[savedFont]) loadFont(FONTS[savedFont]);
 
 		// returning visitor flag
 		const isReturning = localStorage.getItem(VISITED_KEY) === '1';
@@ -1278,7 +1496,8 @@
 <main
 	class="terminal"
 	class:is-mobile={isMobile}
-	style="--accent:{currentTheme.accent};--accent-glow:{currentTheme.glow};--green:{currentTheme.green};--green-glow:{currentTheme.greenGlow}"
+	class:glitching={glitchActive}
+	style="--accent:{currentTheme.accent};--accent-glow:{currentTheme.glow};--green:{currentTheme.green};--green-glow:{currentTheme.greenGlow};--bg:{currentTheme.bg};--fg:{currentTheme.fg};--dim:{currentTheme.dim};--statusBg:{currentTheme.statusBg};--border:{currentTheme.border};--font:{currentFont.family}"
 	onclick={() => { if (!isMobile) inputEl?.focus(); }}
 	onkeydown={() => {}}
 	role="main"
@@ -1405,7 +1624,9 @@
 		<span class="sb-fill"></span>
 		{#if !isMobile}<span class="sb-hint">tab · ↑↓ · ctrl+l</span><span class="sb-div">│</span>{/if}
 		{#if !isMobile}<span class="sb-name">shravan omanakuttan</span><span class="sb-div">│</span>{/if}
-		<span class="sb-theme">theme: {currentTheme.name}</span>
+		<span class="sb-theme">{currentTheme.name}</span>
+		<span class="sb-div">│</span>
+		<span class="sb-font">{currentFont.display.split(' ')[0].toLowerCase()}</span>
 		<span class="sb-div">│</span>
 		<span class="sb-clock">{clockTime}</span>
 	</div>
@@ -1415,13 +1636,30 @@
 	.terminal {
 		position: fixed; inset: 0;
 		display: flex; flex-direction: column;
-		font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Code', monospace;
+		font-family: var(--font, 'JetBrains Mono', 'IBM Plex Mono', monospace);
 		font-size: clamp(13px, 1.3vw, 15.5px);
 		line-height: 1.8;
 		cursor: text;
-		background: #282828;
+		background: var(--bg, #282828);
+		color: var(--fg, #ebdbb2);
 		z-index: 10;
+		transition: background 0.35s ease, color 0.35s ease;
 	}
+
+	/* ── glitch animation ──────────────────────────────── */
+	@keyframes glitch-shift {
+		0%,100% { transform: none; filter: none; clip-path: none; }
+		10%  { transform: skew(-1.5deg) translate(-3px, 0); filter: hue-rotate(90deg) brightness(1.3); }
+		20%  { transform: skew(1deg)   translate(3px, 0);  filter: hue-rotate(-90deg); }
+		30%  { transform: translate(-2px, 2px) scaleX(1.01); clip-path: inset(20% 0 50% 0); }
+		40%  { transform: translate(2px, -2px); clip-path: inset(60% 0 10% 0); filter: hue-rotate(45deg); }
+		50%  { transform: none; clip-path: none; filter: saturate(3); }
+		60%  { transform: skew(-0.5deg); filter: none; }
+		70%  { transform: translate(-1px, 0) skew(0.5deg); clip-path: inset(40% 0 30% 0); }
+		80%  { transform: none; clip-path: none; }
+		90%  { filter: hue-rotate(30deg) brightness(0.9); }
+	}
+	.glitching { animation: glitch-shift 0.65s linear; }
 
 	.scanlines {
 		position: fixed; inset: 0; pointer-events: none; z-index: 20;
@@ -1454,30 +1692,30 @@
 	.top-overlay {
 		position: fixed; inset: 0;
 		z-index: 60;
-		background: #1d2021;
+		background: var(--statusBg, #1d2021);
 		padding: 0;
 		display: flex; flex-direction: column;
 		font-size: clamp(12px, 1.2vw, 14px);
 	}
 	.top-hdr {
-		background: var(--accent); color: #1d2021;
+		background: var(--accent); color: var(--statusBg, #1d2021);
 		font-weight: 700; padding: 3px 16px;
 		letter-spacing: 0.04em; font-size: 12px;
 	}
 	.top-col-hdr {
-		color: #a89984; padding: 4px 16px; border-bottom: 1px solid #3c3836;
+		color: var(--dim, #a89984); padding: 4px 16px; border-bottom: 1px solid var(--border, #3c3836);
 	}
 	.top-row {
-		color: #ebdbb2; padding: 3px 16px;
+		color: var(--fg, #ebdbb2); padding: 3px 16px;
 		white-space: pre;
 	}
-	.top-row.dim  { color: #665c54; }
+	.top-row.dim  { color: var(--dim, #665c54); opacity: 0.7; }
 	.top-row.grn  { color: var(--green); }
 	.top-row.ylw  { color: #d79921; }
 	.top-row.acc  { color: var(--accent); font-weight: 700; }
 	.top-foot {
 		margin-top: auto;
-		background: #3c3836; color: #a89984;
+		background: var(--border, #3c3836); color: var(--dim, #a89984);
 		padding: 3px 16px; font-size: 11px;
 	}
 
@@ -1497,8 +1735,8 @@
 		overscroll-behavior: none;
 	}
 
-	.ln       { color: #ebdbb2; white-space: pre-wrap; word-break: break-word; }
-	.ln.dim   { color: #a89984; }
+	.ln       { color: var(--fg, #ebdbb2); white-space: pre-wrap; word-break: break-word; }
+	.ln.dim   { color: var(--dim, #a89984); }
 	.ln.accent {
 		color: var(--accent); font-weight: 700; letter-spacing: 0.05em;
 		text-shadow: 0 0 10px var(--accent-glow), 0 0 22px var(--accent-glow);
@@ -1511,14 +1749,14 @@
 		color: var(--accent);
 		text-shadow: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-glow);
 	}
-	.prompt-cmd { color: #ebdbb2; }
+	.prompt-cmd { color: var(--fg, #ebdbb2); }
 
 	.input-line {
 		display: flex; align-items: baseline;
 		padding-bottom: 48px;
 		position: relative; z-index: 10;
 	}
-	.input-ghost { color: #ebdbb2; white-space: pre; }
+	.input-ghost { color: var(--fg, #ebdbb2); white-space: pre; }
 
 	.cursor {
 		display: inline-block; width: 8px; height: 1em;
@@ -1542,8 +1780,8 @@
 	.mob-chips {
 		display: flex; gap: 6px;
 		padding: 6px 10px;
-		background: #1d2021;
-		border-top: 1px solid #3c3836;
+		background: var(--statusBg, #1d2021);
+		border-top: 1px solid var(--border, #3c3836);
 		overflow-x: auto; overflow-y: hidden;
 		scrollbar-width: none;
 		-webkit-overflow-scrolling: touch;
@@ -1552,9 +1790,9 @@
 	.mob-chips::-webkit-scrollbar { display: none; }
 	.chip {
 		flex-shrink: 0;
-		background: #3c3836;
-		border: 1px solid #504945;
-		color: #a89984;
+		background: var(--border, #3c3836);
+		border: 1px solid var(--dim, #504945);
+		color: var(--dim, #a89984);
 		font-family: inherit; font-size: 11px;
 		padding: 4px 10px;
 		border-radius: 3px;
@@ -1574,8 +1812,8 @@
 		display: flex; align-items: center; gap: 6px;
 		padding: 8px 10px;
 		padding-bottom: max(8px, env(safe-area-inset-bottom));
-		background: #1d2021;
-		border-top: 1px solid #3c3836;
+		background: var(--statusBg, #1d2021);
+		border-top: 1px solid var(--border, #3c3836);
 		position: relative; z-index: 10;
 	}
 	.mob-prompt {
@@ -1585,12 +1823,12 @@
 	}
 	.mob-input {
 		flex: 1; background: none; border: none; outline: none;
-		color: #ebdbb2; font-family: inherit;
+		color: var(--fg, #ebdbb2); font-family: inherit;
 		font-size: 16px; /* 16px prevents iOS zoom-on-focus */
 		caret-color: var(--accent);
 		min-width: 0;
 	}
-	.mob-input::placeholder { color: #665c54; }
+	.mob-input::placeholder { color: var(--dim, #665c54); }
 	.mob-nav {
 		background: none; border: 1px solid #3c3836;
 		color: #665c54; padding: 5px 8px;
@@ -1615,17 +1853,19 @@
 		display: flex; align-items: center; gap: 10px;
 		min-height: 26px;
 		padding: 0 16px;
-		background: #1d2021;
-		border-top: 1px solid #3c3836;
+		background: var(--statusBg, #1d2021);
+		border-top: 1px solid var(--border, #3c3836);
 		font-size: 11.5px; font-weight: 700;
 		letter-spacing: 0.07em; text-transform: lowercase;
 		position: relative; z-index: 10;
+		transition: background 0.35s ease, border-color 0.35s ease;
 	}
 	.sb-avail { color: var(--green); text-shadow: 0 0 8px var(--green-glow); }
 	.sb-fill  { flex: 1; }
-	.sb-hint  { color: #504945; }
-	.sb-name  { color: #7c6f64; }
-	.sb-div   { color: #3c3836; }
-	.sb-theme { color: var(--accent); opacity: 0.6; }
-	.sb-clock { color: #7c6f64; font-variant-numeric: tabular-nums; }
+	.sb-hint  { color: var(--dim, #504945); opacity: 0.6; }
+	.sb-name  { color: var(--dim, #7c6f64); }
+	.sb-div   { color: var(--border, #3c3836); }
+	.sb-theme { color: var(--accent); opacity: 0.7; }
+	.sb-font  { color: var(--dim, #7c6f64); opacity: 0.7; }
+	.sb-clock { color: var(--dim, #7c6f64); font-variant-numeric: tabular-nums; }
 </style>
