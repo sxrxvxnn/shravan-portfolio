@@ -32,6 +32,167 @@
 		'fastapi and react walk into a bar sonar exits with a job offer',
 		'shipping beats perfection but shipping broken things is worse',
 	];
+	const TYPETEST_BEST_KEY = 'shravan-tt-best';
+
+	// ── Sound (Web Audio — synthetic Mac keyboard click) ───────────────────────
+	const SOUND_KEY = 'shravan-sound';
+	let soundEnabled = $state(true);
+	let _audioCtx: AudioContext | null = null;
+
+	function getAudioCtx(): AudioContext | null {
+		try {
+			if (!_audioCtx || _audioCtx.state === 'closed') _audioCtx = new AudioContext();
+			if (_audioCtx.state === 'suspended') _audioCtx.resume();
+			return _audioCtx;
+		} catch { return null; }
+	}
+
+	function playClick(isEnter = false) {
+		if (!soundEnabled) return;
+		const ctx = getAudioCtx();
+		if (!ctx) return;
+		try {
+			const dur = isEnter ? 0.055 : 0.028;
+			const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+			const d   = buf.getChannelData(0);
+			for (let i = 0; i < d.length; i++) {
+				const t = i / d.length;
+				d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, isEnter ? 3 : 7) * (isEnter ? 0.45 : 0.3);
+			}
+			const src  = ctx.createBufferSource();
+			const filt = ctx.createBiquadFilter();
+			filt.type = 'bandpass';
+			filt.frequency.value = isEnter ? 1100 : 2400;
+			filt.Q.value = isEnter ? 1.2 : 2.5;
+			const gain = ctx.createGain();
+			gain.gain.value = isEnter ? 0.9 : 0.6;
+			src.buffer = buf;
+			src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+			src.start();
+		} catch {}
+	}
+
+	// ── ASCII block font ───────────────────────────────────────────────────────
+	const FIGLET: Record<string, string[]> = {
+		' ': ['     ','     ','     ','     ','     '],
+		'A': [' ▄█▄ ','█   █','█████','█   █','█   █'],
+		'B': ['████ ','█   █','████ ','█   █','████ '],
+		'C': [' ████','█    ','█    ','█    ',' ████'],
+		'D': ['███  ','█  █ ','█   █','█  █ ','███  '],
+		'E': ['█████','█    ','████ ','█    ','█████'],
+		'F': ['█████','█    ','████ ','█    ','█    '],
+		'G': [' ████','█    ','█  ██','█   █',' ████'],
+		'H': ['█   █','█   █','█████','█   █','█   █'],
+		'I': ['█████','  █  ','  █  ','  █  ','█████'],
+		'J': ['  ███','   █ ','   █ ','█  █ ',' ██  '],
+		'K': ['█   █','█  █ ','███  ','█  █ ','█   █'],
+		'L': ['█    ','█    ','█    ','█    ','█████'],
+		'M': ['█   █','██ ██','█ █ █','█   █','█   █'],
+		'N': ['█   █','██  █','█ █ █','█  ██','█   █'],
+		'O': [' ███ ','█   █','█   █','█   █',' ███ '],
+		'P': ['████ ','█   █','████ ','█    ','█    '],
+		'Q': [' ███ ','█   █','█ █ █','█  ██',' ████'],
+		'R': ['████ ','█   █','████ ','█  █ ','█   █'],
+		'S': [' ████','█    ',' ███ ','    █','████ '],
+		'T': ['█████','  █  ','  █  ','  █  ','  █  '],
+		'U': ['█   █','█   █','█   █','█   █',' ███ '],
+		'V': ['█   █','█   █','█   █',' █ █ ','  █  '],
+		'W': ['█   █','█   █','█ █ █','██ ██','█   █'],
+		'X': ['█   █',' █ █ ','  █  ',' █ █ ','█   █'],
+		'Y': ['█   █',' █ █ ','  █  ','  █  ','  █  '],
+		'Z': ['█████','   █ ','  █  ',' █   ','█████'],
+		'0': [' ███ ','█  ██','█ █ █','██  █',' ███ '],
+		'1': ['  █  ',' ██  ','  █  ','  █  ','█████'],
+		'2': [' ███ ','█   █','   █ ','  █  ','█████'],
+		'3': ['████ ','    █','  ██ ','    █','████ '],
+		'4': ['█  █ ','█  █ ','█████','   █ ','   █ '],
+		'5': ['█████','█    ','████ ','    █','████ '],
+		'6': [' ███ ','█    ','████ ','█   █',' ███ '],
+		'7': ['█████','   █ ','  █  ',' █   ','█    '],
+		'8': [' ███ ','█   █',' ███ ','█   █',' ███ '],
+		'9': [' ███ ','█   █',' ████','    █',' ███ '],
+		'!': ['  █  ','  █  ','  █  ','     ','  █  '],
+		'?': [' ███ ','    █','  ██ ','     ','  █  '],
+		'.': ['     ','     ','     ','     ',' ██  '],
+		'-': ['     ','     ','█████','     ','     '],
+	};
+
+	function renderAscii(text: string): string[] {
+		const rows = ['','','','',''];
+		for (const ch of text.toUpperCase().slice(0, 10)) {
+			const art = FIGLET[ch] ?? FIGLET[' ']!;
+			const w = Math.max(...art.map(r => r.length));
+			art.forEach((row, i) => { rows[i] += row.padEnd(w) + ' '; });
+		}
+		return rows.filter(r => r.trim()).map(r => '  ' + r);
+	}
+
+	// ── Particle burst on theme change ─────────────────────────────────────────
+	let particleBurst  = $state(false);
+	let particleCanvas = $state<HTMLCanvasElement | null>(null);
+
+	$effect(() => {
+		if (particleBurst && particleCanvas) {
+			const canvas = particleCanvas;
+			canvas.width  = window.innerWidth;
+			canvas.height = window.innerHeight;
+			const ctx = canvas.getContext('2d');
+			if (!ctx) return;
+			const glyphs = '░▒▓█▄▀■◆●◇○□';
+			const pts = Array.from({ length: 52 }, () => ({
+				x:    window.innerWidth  / 2 + (Math.random() - 0.5) * 400,
+				y:    window.innerHeight / 2 + (Math.random() - 0.5) * 250,
+				vx:   (Math.random() - 0.5) * 14,
+				vy:   (Math.random() - 0.5) * 11 - 3,
+				life: Math.random() * 0.5 + 0.5,
+				ch:   glyphs[Math.floor(Math.random() * glyphs.length)],
+				size: Math.floor(Math.random() * 10) + 10,
+			}));
+			let frame: number;
+			const col = currentTheme.accent;
+			function drawParticles() {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				let alive = false;
+				for (const p of pts) {
+					p.x += p.vx; p.y += p.vy; p.vy += 0.28; p.life -= 0.02;
+					if (p.life <= 0) continue;
+					alive = true;
+					ctx.globalAlpha = Math.min(p.life, 1);
+					ctx.fillStyle   = col;
+					ctx.font        = `${p.size}px monospace`;
+					ctx.fillText(p.ch, p.x, p.y);
+				}
+				ctx.globalAlpha = 1;
+				if (alive) frame = requestAnimationFrame(drawParticles);
+				else particleBurst = false;
+			}
+			drawParticles();
+			return () => cancelAnimationFrame(frame);
+		}
+	});
+
+	// ── Interactive wizard (contact, etc.) ─────────────────────────────────────
+	type WizardStep = { key: string; prompt: string };
+	interface Wizard { steps: WizardStep[]; data: Record<string, string>; idx: number; onDone: (data: Record<string, string>) => Promise<void> }
+	let wizard = $state<Wizard | null>(null);
+
+	// ── Text scramble push ─────────────────────────────────────────────────────
+	async function pushScramble(text: string, dim = false) {
+		const line: Extract<Line, { t: 'out' }> = { t: 'out', text: '', dim };
+		lines = [...lines, line];
+		const chars = '▓▒░█▄▀■□◆○ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+		for (let i = 0; i < text.length; i++) {
+			if (text[i] === ' ') { line.text = text.slice(0, i + 1); lines = [...lines]; continue; }
+			for (let j = 0; j < 2; j++) {
+				line.text = text.slice(0, i) + chars[Math.floor(Math.random() * chars.length)];
+				lines = [...lines];
+				await sleep(12);
+			}
+			line.text = text.slice(0, i + 1);
+			lines = [...lines];
+		}
+		await scrollBottom();
+	}
 
 	let inputEl:  HTMLInputElement;
 	let outputEl: HTMLElement;
@@ -273,7 +434,11 @@
 		'font', 'font list',
 		'font jetbrains', 'font fira-code', 'font ubuntu-mono', 'font roboto-mono',
 		'font source-code', 'font ibm-plex', 'font inconsolata', 'font space-mono', 'font anonymous-pro',
-		'typetest', 'tt', 'glitch', 'hack',
+		'typetest', 'tt', 'typetest --best', 'tt --best',
+		'glitch', 'hack', 'ascii', 'screenshot',
+		'changelog', 'version', 'easter', 'secrets', 'hint',
+		'sound on', 'sound off', 'sound',
+		'neofetch', 'contact',
 		'open github', 'open linkedin', 'open email',
 		'man shravan', 'man help', 'man ls', 'man cat', 'man git',
 		'export HIRED=true',
@@ -282,8 +447,25 @@
 	];
 
 	function tabComplete() {
-		const val = inputValue.toLowerCase().trim();
+		const val   = inputValue.toLowerCase().trim();
 		if (!val) return;
+		const parts = val.split(/\s+/);
+
+		// Multi-word completions: theme <name>, font <name>
+		if (parts[0] === 'theme' && parts.length >= 2) {
+			const partial = parts[1];
+			const opts    = ['list', 'random', ...Object.keys(THEMES)].filter(k => k.startsWith(partial) && k !== partial);
+			if (opts.length === 1) { inputValue = `theme ${opts[0]}`; return; }
+			if (opts.length > 1)  { push({ t: 'blank' }, ...opts.map(o => ({ t: 'out' as const, text: `  theme ${o}`, dim: true })), { t: 'blank' }); return; }
+		}
+		if (parts[0] === 'font' && parts.length >= 2) {
+			const partial = parts[1];
+			const opts    = ['list', ...Object.keys(FONTS)].filter(k => k.startsWith(partial) && k !== partial);
+			if (opts.length === 1) { inputValue = `font ${opts[0]}`; return; }
+			if (opts.length > 1)  { push({ t: 'blank' }, ...opts.map(o => ({ t: 'out' as const, text: `  font ${o}`, dim: true })), { t: 'blank' }); return; }
+		}
+
+		// Standard single-word completion
 		const matches = COMPLETIONS.filter(c => c.startsWith(val) && c !== val);
 		if (matches.length === 1) {
 			inputValue = matches[0];
@@ -635,19 +817,8 @@
 			{ t: 'blank' },
 		];
 
-		// ── skills ──
-		if (cmd === 'skills') return [
-			{ t: 'blank' },
-			{ t: 'out', text: 'FRONTEND', accent: true },
-			{ t: 'out', text: '    ' + resume.skills.frontend.join('  ·  '), dim: true },
-			{ t: 'blank' },
-			{ t: 'out', text: 'BACKEND', accent: true },
-			{ t: 'out', text: '    ' + resume.skills.backend.join('  ·  '), dim: true },
-			{ t: 'blank' },
-			{ t: 'out', text: 'TOOLS', accent: true },
-			{ t: 'out', text: '    ' + resume.skills.tools.join('  ·  '), dim: true },
-			{ t: 'blank' },
-		];
+		// ── skills — handled async in submit() ──
+		if (cmd === 'skills') return [];
 
 		// ── status ──
 		if (cmd === 'status') return [
@@ -664,30 +835,122 @@
 		];
 
 		// ── contact ──
-		if (cmd === 'contact') return [
-			{ t: 'blank' },
-			{ t: 'out', text: 'CONTACT', accent: true },
-			{ t: 'blank' },
-			{ t: 'out', text: '  email      shravanomanakuttan@gmail.com' },
-			{ t: 'out', text: '  github     github.com/sxrxvxnn' },
-			{ t: 'out', text: '  linkedin   linkedin.com/in/shravanomanakuttan' },
-			{ t: 'blank' },
-			{ t: 'out', text: 'open github · open linkedin · open email · schedule', dim: true },
-			{ t: 'blank' },
-		];
+		if (cmd === 'contact') {
+			wizard = {
+				steps: [
+					{ key: 'name',    prompt: 'your name:' },
+					{ key: 'company', prompt: 'company / role (optional, press enter to skip):' },
+					{ key: 'message', prompt: 'your message:' },
+				],
+				data: {}, idx: 0,
+				onDone: async () => {},
+			};
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: '  CONTACT', accent: true },
+				{ t: 'out', text: '  ─────────────────────────────────────', dim: true },
+				{ t: 'blank' },
+				{ t: 'out', text: '  your name:', dim: true },
+				{ t: 'blank' },
+			];
+		}
 
 		// ── neofetch ──
 		if (cmd === 'neofetch') return [
 			{ t: 'blank' },
 			{ t: 'out', text: '  ╭──────╮   shravan@portfolio', accent: true },
-			{ t: 'out', text: '  │ ◉  ◉ │   ─────────────────────────────' },
-			{ t: 'out', text: '  │  ──  │   OS       shravan-os 2.0.0' },
-			{ t: 'out', text: '  │ ╰──╯ │   Shell    sveltekit · gsap · three.js' },
-			{ t: 'out', text: '  ╰──────╯   Lang      python  typescript' },
-			{ t: 'out', text: '             Tools     fastapi · groq · playwright' },
-			{ t: 'out', text: '             Uptime    3 months @ beagle security' },
+			{ t: 'out', text: '  │ ◉  ◉ │   ─────────────────────────────────────' },
+			{ t: 'out', text: '  │  ──  │   OS       shravan-os 2.0.0 (SvelteKit)' },
+			{ t: 'out', text: '  │ ╰──╯ │   Shell    sveltekit-zsh 5.9' },
+			{ t: 'out', text: '  ╰──────╯   Theme     ' + currentTheme.name },
+			{ t: 'out', text: '             Font      ' + currentFont.display },
+			{ t: 'out', text: '             Lang      Python  TypeScript  Svelte' },
+			{ t: 'out', text: '             Tools     FastAPI · Groq · Playwright' },
+			{ t: 'out', text: '             Uptime    3 months @ Beagle Security' },
 			{ t: 'out', text: '             Pkgs      10+ modules shipped', green: true },
 			{ t: 'out', text: '             Status    ◉ available from 2026', green: true },
+			{ t: 'blank' },
+		];
+
+		// ── sound ──
+		if (cmd === 'sound on' || cmd === 'sound') { soundEnabled = true; try { localStorage.setItem(SOUND_KEY, '1'); } catch {} return [{ t: 'blank' }, { t: 'out', text: '  keyboard sounds on', green: true }, { t: 'blank' }]; }
+		if (cmd === 'sound off') { soundEnabled = false; try { localStorage.setItem(SOUND_KEY, '0'); } catch {} return [{ t: 'blank' }, { t: 'out', text: '  keyboard sounds off', dim: true }, { t: 'blank' }]; }
+
+		// ── typetest best ──
+		if (cmd === 'typetest --best' || cmd === 'tt --best' || cmd === 'tt best') {
+			const best = localStorage.getItem(TYPETEST_BEST_KEY);
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: `  personal best: ${best ? `${best} WPM` : 'no record yet — try: typetest'}`, accent: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── ascii ──
+		if (verb === 'ascii' || verb === 'figlet') {
+			const text = arg || 'SHRAVAN';
+			const rows = renderAscii(text);
+			if (!rows.length) return [{ t: 'blank' }, { t: 'out', text: `  unknown chars. use A-Z 0-9 !?.-`, dim: true }, { t: 'blank' }];
+			return [{ t: 'blank' }, ...rows.map(r => ({ t: 'out' as const, text: r, accent: true })), { t: 'blank' }];
+		}
+
+		// ── screenshot ──
+		if (cmd === 'screenshot') {
+			const snapshot = lines.slice(-20).map(l => {
+				if (l.t === 'blank') return '';
+				if (l.t === 'prompt') return `${PROMPT} ${l.cmd}`;
+				return l.text;
+			}).join('\n');
+			try { navigator.clipboard.writeText(snapshot).catch(() => {}); } catch {}
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: '  last 20 lines copied to clipboard', green: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── changelog ──
+		if (cmd === 'changelog' || cmd === 'version') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'SHRAVAN-OS  CHANGELOG', accent: true },
+			{ t: 'out', text: '──────────────────────────────────────────', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  v2.1  2026-08-01', accent: true },
+			{ t: 'out', text: '  ✦ 21 MonkeyType themes  (theme list)', green: true },
+			{ t: 'out', text: '  ✦ 9 fonts with live switch  (font list)' },
+			{ t: 'out', text: '  ✦ typing speed test  (typetest)', green: true },
+			{ t: 'out', text: '  ✦ mac keyboard sounds  (sound on/off)' },
+			{ t: 'out', text: '  ✦ animated skill bars, hire sequence' },
+			{ t: 'out', text: '  ✦ hack · glitch · ascii · screenshot' },
+			{ t: 'out', text: '  ✦ interactive contact wizard' },
+			{ t: 'out', text: '  ✦ particle burst on theme change' },
+			{ t: 'out', text: '  ✦ text scramble on boot' },
+			{ t: 'blank' },
+			{ t: 'out', text: '  v2.0  2026-07-28', accent: true },
+			{ t: 'out', text: '  ✦ matrix rain overlay', dim: true },
+			{ t: 'out', text: '  ✦ top / htop process viewer', dim: true },
+			{ t: 'out', text: '  ✦ Safari fixed-position fix', dim: true },
+			{ t: 'out', text: '  ✦ preloader store sync', dim: true },
+			{ t: 'blank' },
+		];
+
+		// ── easter / secrets ──
+		if (cmd === 'easter' || cmd === 'secrets' || cmd === 'hint') return [
+			{ t: 'blank' },
+			{ t: 'out', text: '  HIDDEN COMMANDS', accent: true },
+			{ t: 'out', text: '  ─────────────────────────────────────', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  ↑ ↑ ↓ ↓ ← → ← → b a   konami code', dim: true },
+			{ t: 'out', text: '  diff expectations.txt reality.txt', dim: true },
+			{ t: 'out', text: '  cat .ssh/id_rsa', dim: true },
+			{ t: 'out', text: '  ssh shravan@google.com', dim: true },
+			{ t: 'out', text: '  ping faang.com', dim: true },
+			{ t: 'out', text: '  :q  or  :q!', dim: true },
+			{ t: 'out', text: '  rm -rf /', dim: true },
+			{ t: 'out', text: '  export HIRED=true', dim: true },
+			{ t: 'out', text: '  git push', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  ...and a few more. explore.', dim: true },
 			{ t: 'blank' },
 		];
 
@@ -754,25 +1017,9 @@
 			return [{ t: 'blank' }, { t: 'out', text: `git: '${arg}' is not a git command. try: git log`, dim: true }, { t: 'blank' }];
 		}
 
-		// ── sudo ──
+		// ── sudo ── (hire shravan handled async in submit)
 		if (verb === 'sudo') {
-			if (arg === 'hire shravan') return [
-				{ t: 'blank' },
-				{ t: 'out', text: '[sudo] password for recruiter: ......', dim: true },
-				{ t: 'blank' },
-				{ t: 'out', text: '  ACCESS GRANTED', green: true },
-				{ t: 'blank' },
-				{ t: 'out', text: '  You found the secret command.' },
-				{ t: 'out', text: '  Shravan writes Python until 2am and ships at 9am.' },
-				{ t: 'out', text: '  Built an $800/mo replacement tool solo in 90 days.' },
-				{ t: 'out', text: '  Available from 2026. Open to relocate.', green: true },
-				{ t: 'blank' },
-				{ t: 'out', text: '  shravanomanakuttan@gmail.com', accent: true },
-				{ t: 'out', text: '  linkedin.com/in/shravanomanakuttan', accent: true },
-				{ t: 'blank' },
-				{ t: 'out', text: '  Your move.', accent: true },
-				{ t: 'blank' },
-			];
+			if (arg === 'hire shravan') return [];
 			return [{ t: 'blank' }, { t: 'out', text: 'nice try.' }, { t: 'blank' }];
 		}
 
@@ -863,12 +1110,14 @@
 				const k = themeKeys[Math.floor(Math.random() * themeKeys.length)];
 				currentTheme = THEMES[k];
 				try { localStorage.setItem(THEME_KEY, k); } catch {}
+				particleBurst = true;
 				return [{ t: 'blank' }, { t: 'out', text: `theme → ${k}  (${THEMES[k].name})`, green: true }, { t: 'blank' }];
 			}
 			const t = THEMES[arg];
 			if (t) {
 				currentTheme = t;
 				try { localStorage.setItem(THEME_KEY, arg); } catch {}
+				particleBurst = true;
 				return [{ t: 'blank' }, { t: 'out', text: `theme → ${arg}  (${t.name})`, green: true }, { t: 'blank' }];
 			}
 			return [
@@ -1295,6 +1544,77 @@
 		busy = false;
 	}
 
+	// ── Animated skills bars ──────────────────────────────────────────────────
+	async function runSkillsAnim() {
+		busy = true;
+		const skills = [
+			{ name: 'Python / FastAPI',    pct: 90, color: 'green'  as const },
+			{ name: 'TypeScript / React',  pct: 84, color: 'green'  as const },
+			{ name: 'PostgreSQL / SQL',    pct: 78, color: 'green'  as const },
+			{ name: 'Playwright / Scrape', pct: 86, color: 'green'  as const },
+			{ name: 'Svelte / SvelteKit',  pct: 76, color: 'green'  as const },
+			{ name: 'Chrome MV3',          pct: 80, color: 'green'  as const },
+			{ name: 'Groq / LLM APIs',     pct: 72, color: 'accent' as const },
+			{ name: 'Docker / Vercel',     pct: 66, color: 'accent' as const },
+		];
+		await push(
+			{ t: 'blank' },
+			{ t: 'out', text: 'SKILLS', accent: true },
+			{ t: 'out', text: '──────────────────────────────────────────', dim: true },
+			{ t: 'blank' },
+		);
+		const BAR = 28;
+		for (const sk of skills) {
+			const filled = Math.round((sk.pct / 100) * BAR);
+			const line: Extract<Line, { t: 'out' }> = { t: 'out', text: `  ${sk.name.padEnd(22)} [${'░'.repeat(BAR)}] ${sk.pct}%`, [sk.color]: true };
+			lines = [...lines, line];
+			await scrollBottom();
+			for (let i = 0; i <= filled; i++) {
+				line.text = `  ${sk.name.padEnd(22)} [${'█'.repeat(i)}${'░'.repeat(BAR - i)}] ${sk.pct}%`;
+				lines = [...lines];
+				await sleep(18);
+			}
+			await sleep(40);
+		}
+		await push(
+			{ t: 'blank' },
+			{ t: 'out', text: '  LEARNING', dim: true },
+			{ t: 'out', text: '  Rust · Go · Kubernetes · LLM fine-tuning', dim: true },
+			{ t: 'blank' },
+		);
+		busy = false;
+	}
+
+	// ── Hire animation ────────────────────────────────────────────────────────
+	async function runHireAnim() {
+		busy = true;
+		const steps: Array<Partial<Extract<Line, { t: 'out' }>> & { text: string }> = [
+			{ text: '  [sudo] password for shravan: ••••••••', dim: true },
+			{ text: '  verifying identity...', dim: true },
+			{ text: '  [OK] identity confirmed: Shravan Omanakuttan', green: true },
+			{ text: '  fetching candidate profile...', dim: true },
+			{ text: '  [OK] 90-day solo ship · FastAPI · React · Supabase', green: true },
+			{ text: '  running skills check...', dim: true },
+			{ text: '  [OK] Python        ████████░░  90%', green: true },
+			{ text: '  [OK] TypeScript    ███████░░░  84%', green: true },
+			{ text: '  [OK] ships fast    ██████████ 100%', accent: true },
+			{ text: '  calculating offer...', dim: true },
+			{ text: '  [OK] offer ready', green: true },
+			{ text: '' },
+			{ text: '  ╔══════════════════════════════════════╗', accent: true },
+			{ text: '  ║  HIRE REQUEST SUBMITTED SUCCESSFULLY ║', accent: true },
+			{ text: '  ╚══════════════════════════════════════╝', accent: true },
+			{ text: '' },
+			{ text: '  next step → open email', dim: true },
+		];
+		for (const s of steps) {
+			await push({ t: 'out', ...s });
+			await sleep(Math.random() * 180 + 70);
+		}
+		await push({ t: 'blank' });
+		busy = false;
+	}
+
 	// ── Auto-play boot sequence ────────────────────────────────────────────────
 	async function awaitPreloader() {
 		// Resolves when preloaderDone fires, or after 5.6s max (Safari failsafe)
@@ -1338,16 +1658,18 @@
 		// 100ms buffer so the site-wrap CSS fade starts, then begin boot animation.
 		await awaitPreloader();
 		await sleep(100);
+		await push({ t: 'blank' });
+		for (const row of [
+			'  ███████╗██╗  ██╗██████╗  █████╗ ██╗   ██╗ █████╗ ███╗  ██╗',
+			'  ██╔════╝██║  ██║██╔══██╗██╔══██╗██║   ██║██╔══██╗████╗ ██║',
+			'  ███████╗███████║██████╔╝███████║██║   ██║███████║██╔██╗██║',
+			'  ╚════██║██╔══██║██╔══██╗██╔══██║╚██╗ ██╔╝██╔══██║██║╚████║',
+			'  ███████║██║  ██║██║  ██║██║  ██║ ╚████╔╝ ██║  ██║██║ ╚███║',
+			'  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝╚═╝  ╚══╝',
+		]) { await pushScramble(row, true); await sleep(20); }
 		await bootLines([
 			{ t: 'blank' },
-			{ t: 'out', text: '  ███████╗██╗  ██╗██████╗  █████╗ ██╗   ██╗ █████╗ ███╗  ██╗', dim: true },
-			{ t: 'out', text: '  ██╔════╝██║  ██║██╔══██╗██╔══██╗██║   ██║██╔══██╗████╗ ██║', dim: true },
-			{ t: 'out', text: '  ███████╗███████║██████╔╝███████║██║   ██║███████║██╔██╗██║', dim: true },
-			{ t: 'out', text: '  ╚════██║██╔══██║██╔══██╗██╔══██║╚██╗ ██╔╝██╔══██║██║╚████║', dim: true },
-			{ t: 'out', text: '  ███████║██║  ██║██║  ██║██║  ██║ ╚████╔╝ ██║  ██║██║ ╚███║', dim: true },
-			{ t: 'out', text: '  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝╚═╝  ╚══╝', dim: true },
-			{ t: 'blank' },
-			{ t: 'out', text: '  shravan-os v2.0.0  ·  sveltekit · three.js · gsap', dim: true },
+			{ t: 'out', text: '  shravan-os v2.1.0  ·  sveltekit · gsap', dim: true },
 			{ t: 'out', text: '  type  help  ·  help --recruiter  if you\'re hiring', dim: true },
 			{ t: 'blank' },
 		], 48);
@@ -1384,22 +1706,55 @@
 		cmdHistory = [raw, ...cmdHistory.slice(0, 49)];
 		histIdx    = -1;
 
+		// haptic on mobile
+		try { if (isMobile && navigator.vibrate) navigator.vibrate(8); } catch {}
+		playClick(true);
+
+		// wizard step handler
+		if (wizard) {
+			const step = wizard.steps[wizard.idx];
+			wizard.data[step.key] = raw;
+			await push({ t: 'prompt', cmd: raw.length > 44 ? raw.slice(0, 44) + '…' : raw });
+			wizard.idx++;
+			if (wizard.idx < wizard.steps.length) {
+				const next = wizard.steps[wizard.idx];
+				await push({ t: 'blank' }, { t: 'out', text: `  ${next.prompt}`, dim: true }, { t: 'blank' });
+				return;
+			}
+			const data = { ...wizard.data };
+			wizard = null;
+			const subject  = encodeURIComponent(`Portfolio — ${data.name}${data.company ? ` (${data.company})` : ''}`);
+			const body     = encodeURIComponent(data.message ?? '');
+			window.location.href = `mailto:shravanomanakuttan@gmail.com?subject=${subject}&body=${body}`;
+			await push(
+				{ t: 'blank' },
+				{ t: 'out', text: '  opening mail client...', green: true },
+				{ t: 'out', text: `  to: shravanomanakuttan@gmail.com`, dim: true },
+				{ t: 'blank' },
+			);
+			return;
+		}
+
 		// typetest evaluation
 		if (typetestActive) {
 			typetestActive = false;
 			const mins = (Date.now() - typetestStart) / 60000;
-			const wordCount = typetestTarget.split(' ').length;
-			const wpm = Math.round(wordCount / mins);
-			const targetChars = typetestTarget.split('');
-			const inputChars  = raw.split('');
+			const wpm  = Math.round(typetestTarget.split(' ').length / mins);
+			const tc   = typetestTarget.split('');
+			const ic   = raw.split('');
 			let correct = 0;
-			targetChars.forEach((c, i) => { if (inputChars[i] === c) correct++; });
-			const accuracy = Math.round((correct / targetChars.length) * 100);
-			const msg = accuracy === 100 && wpm > 60 ? '  flawless. you should work here.' : accuracy < 70 ? '  rough. try again: typetest' : '  not bad. try again: typetest';
+			tc.forEach((c, i) => { if (ic[i] === c) correct++; });
+			const accuracy = Math.round((correct / tc.length) * 100);
+			const prevBest = parseInt(localStorage.getItem(TYPETEST_BEST_KEY) ?? '0');
+			const isNewBest = wpm > prevBest;
+			if (isNewBest) localStorage.setItem(TYPETEST_BEST_KEY, String(wpm));
+			const msg = accuracy === 100 && wpm > 60
+				? '  flawless. you should work here.'
+				: accuracy < 70 ? '  rough. try again: typetest' : '  not bad. try again: typetest';
 			await push(
 				{ t: 'prompt', cmd: raw.length > 44 ? raw.slice(0, 44) + '…' : raw },
 				{ t: 'blank' },
-				{ t: 'out', text: `  WPM: ${wpm}`, accent: true },
+				{ t: 'out', text: `  WPM: ${wpm}${isNewBest ? '  🏆 new best!' : ''}`, accent: true },
 				{ t: 'out', text: `  accuracy: ${accuracy}%`, ...(accuracy >= 90 ? { green: true } : { yellow: true }) },
 				{ t: 'out', text: msg, dim: true },
 				{ t: 'blank' },
@@ -1417,6 +1772,20 @@
 			return;
 		}
 
+		if (lc === 'skills') {
+			await push({ t: 'prompt', cmd: raw });
+			trackCommand('skills');
+			await runSkillsAnim();
+			return;
+		}
+
+		if (lc === 'sudo hire shravan') {
+			await push({ t: 'prompt', cmd: raw });
+			trackCommand('sudo hire shravan');
+			await runHireAnim();
+			return;
+		}
+
 		await push({ t: 'prompt', cmd: raw });
 		await push(...runCommand(raw));
 		trackCommand(lc);
@@ -1429,6 +1798,9 @@
 		if (e.key === 'ArrowDown') { e.preventDefault(); histIdx = Math.max(histIdx - 1, -1); inputValue = histIdx === -1 ? '' : cmdHistory[histIdx]; return; }
 		if (e.ctrlKey && e.key === 'l') { e.preventDefault(); lines = []; return; }
 		if (e.ctrlKey && e.key === 'c') { inputValue = ''; return; }
+
+		// key click sound
+		if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) playClick(false);
 
 		// Konami code detector
 		if (e.key === KONAMI[konamiIdx]) {
@@ -1447,12 +1819,19 @@
 		isMobile = window.innerWidth < 768;
 		window.addEventListener('resize', () => { isMobile = window.innerWidth < 768; });
 
-		// restore saved theme
+		// restore saved theme / font / sound
 		const savedTheme = localStorage.getItem(THEME_KEY);
 		if (savedTheme && THEMES[savedTheme]) currentTheme = THEMES[savedTheme];
-		// restore saved font
 		const savedFont = localStorage.getItem(FONT_KEY);
 		if (savedFont && FONTS[savedFont]) loadFont(FONTS[savedFont]);
+		soundEnabled = localStorage.getItem(SOUND_KEY) !== '0';
+
+		// URL params override: ?theme=synthwave&font=fira-code
+		const urlP = new URLSearchParams(window.location.search);
+		const urlTheme = urlP.get('theme');
+		const urlFont  = urlP.get('font');
+		if (urlTheme && THEMES[urlTheme]) { currentTheme = THEMES[urlTheme]; try { localStorage.setItem(THEME_KEY, urlTheme); } catch {} }
+		if (urlFont  && FONTS[urlFont])   { loadFont(FONTS[urlFont]); }
 
 		// returning visitor flag
 		const isReturning = localStorage.getItem(VISITED_KEY) === '1';
@@ -1465,12 +1844,19 @@
 		tick();
 		const clockInterval = setInterval(tick, 1000);
 
-		// mobile swipe up/down for history
-		let touchStartY = 0;
-		const onTouchStart = (e: TouchEvent) => { touchStartY = e.touches[0].clientY; };
+		// mobile swipe gestures: up/down = history, left = clear, right = help
+		let touchStartX = 0, touchStartY = 0;
+		const onTouchStart = (e: TouchEvent) => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; };
 		const onTouchEnd   = (e: TouchEvent) => {
 			if (!isMobile || busy) return;
+			const dx = touchStartX - e.changedTouches[0].clientX;
 			const dy = touchStartY - e.changedTouches[0].clientY;
+			if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 60) {
+				// horizontal swipe
+				if (dx > 0) { lines = []; } // swipe left = clear
+				else { push(...runCommand('help')); } // swipe right = help
+				return;
+			}
 			if (Math.abs(dy) < 40) return;
 			if (dy > 0) {
 				histIdx    = Math.min(histIdx + 1, cmdHistory.length - 1);
@@ -1510,6 +1896,11 @@
 	<!-- matrix overlay -->
 	{#if matrixActive}
 		<canvas class="matrix-canvas" bind:this={matrixCanvas}></canvas>
+	{/if}
+
+	<!-- particle burst -->
+	{#if particleBurst}
+		<canvas class="particle-canvas" bind:this={particleCanvas} aria-hidden="true"></canvas>
 	{/if}
 
 	<!-- top overlay -->
@@ -1628,6 +2019,8 @@
 		<span class="sb-div">│</span>
 		<span class="sb-font">{currentFont.display.split(' ')[0].toLowerCase()}</span>
 		<span class="sb-div">│</span>
+		<span class="sb-sound" onclick={() => { soundEnabled = !soundEnabled; try { localStorage.setItem(SOUND_KEY, soundEnabled ? '1' : '0'); } catch {} }} title="toggle sound" role="button" tabindex="-1">{soundEnabled ? '♪' : '♪̶'}</span>
+		<span class="sb-div">│</span>
 		<span class="sb-clock">{clockTime}</span>
 	</div>
 </main>
@@ -1686,6 +2079,11 @@
 	.matrix-canvas {
 		position: fixed; inset: 0;
 		z-index: 50; pointer-events: none;
+	}
+
+	.particle-canvas {
+		position: fixed; inset: 0;
+		z-index: 55; pointer-events: none;
 	}
 
 	/* ── top overlay ─────────────────────────────────────── */
@@ -1867,5 +2265,7 @@
 	.sb-div   { color: var(--border, #3c3836); }
 	.sb-theme { color: var(--accent); opacity: 0.7; }
 	.sb-font  { color: var(--dim, #7c6f64); opacity: 0.7; }
+	.sb-sound { color: var(--dim, #7c6f64); opacity: 0.7; cursor: pointer; user-select: none; transition: opacity 0.15s; }
+	.sb-sound:hover { opacity: 1; color: var(--accent); }
 	.sb-clock { color: var(--dim, #7c6f64); font-variant-numeric: tabular-nums; }
 </style>
