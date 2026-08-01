@@ -8,20 +8,13 @@
 	import Lenis from 'lenis';
 
 	let { children } = $props();
-	let siteReady      = $state(false);
-	let skipPreloader  = $state(false);
-	let noiseUrl       = $state('');
+	let siteReady = $state(false);
+	let noiseUrl  = $state('');
 
 	const SITE_URL = 'https://shravanomanakuttan.vercel.app';
 	const OG_IMAGE = `${SITE_URL}/og.svg`;
 
 	onMount(() => {
-		// skip preloader on return visits
-		if (localStorage.getItem('shravan-visited') === '1') {
-			skipPreloader = true;
-			siteReady     = true;
-		}
-
 		const c = document.createElement('canvas');
 		c.width = c.height = 256;
 		const ctx = c.getContext('2d')!;
@@ -83,7 +76,7 @@
 
 <Cursor />
 
-{#if browser && !skipPreloader}
+{#if browser}
 	<Preloader onDone={() => (siteReady = true)} />
 {/if}
 

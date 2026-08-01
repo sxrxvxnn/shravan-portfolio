@@ -1110,7 +1110,9 @@
 
 	// ── Auto-play boot sequence ────────────────────────────────────────────────
 	async function autoPlay(isReturning: boolean) {
-		// ── RETURNING VISITOR: instant load, restore session ──────────────────
+		// ── RETURNING VISITOR: pre-load in background while preloader plays ────
+		// site-wrap is opacity:0 until Preloader calls onDone (~4.5s),
+		// so we load instantly — terminal is ready before user sees it.
 		if (isReturning) {
 			try {
 				const saved = localStorage.getItem(LINES_KEY);
@@ -1126,15 +1128,16 @@
 			await tick();
 			if (!isMobile) inputEl?.focus();
 
-			// handle ?cmd= on return visits too
 			const p = new URLSearchParams(window.location.search);
 			const c = p.get('cmd');
 			if (c) { await sleep(200); await typeCommand(c, 42); await push(...runCommand(c)); }
 			return;
 		}
 
-		// ── FIRST VISIT: sync with preloader animation ────────────────────────
-		await sleep(6000);
+		// ── FIRST VISIT: wait for preloader fade-out to complete ─────────────
+		// Preloader calls onDone at ~4525ms, site-wrap CSS transition: 500ms.
+		// 5200ms aligns terminal boot with site becoming fully visible.
+		await sleep(5200);
 		await bootLines([
 			{ t: 'blank' },
 			{ t: 'out', text: '  ███████╗██╗  ██╗██████╗  █████╗ ██╗   ██╗ █████╗ ███╗  ██╗', dim: true },
