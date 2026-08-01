@@ -17,8 +17,15 @@
 	let matrixCanvas = $state<HTMLCanvasElement | null>(null);
 	let topActive      = $state(false);
 	let topTick        = $state(0);
-	let glitchActive   = $state(false);
-	let typetestActive = $state(false);
+	let glitchActive      = $state(false);
+	let typetestActive    = $state(false);
+	let musicPlaying      = $state(false);
+	let musicReady        = $state(false);
+	let musicPromptActive = $state(false);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let ytPlayer: any     = null;
+	const MUSIC_KEY   = 'shravan-music';
+	const YT_VIDEO_ID = 'ZUuVHJbHIqY'; // konfused kid — chenda bass
 	let typetestTarget = '';
 	let typetestStart  = 0;
 
@@ -33,6 +40,42 @@
 		'shipping beats perfection but shipping broken things is worse',
 	];
 	const TYPETEST_BEST_KEY = 'shravan-tt-best';
+
+	// ── Music player (YouTube IFrame API) ─────────────────────────────────────
+	function loadYouTubeAPI(): Promise<void> {
+		return new Promise(resolve => {
+			if ((window as any).YT?.Player) { resolve(); return; }
+			const tag = document.createElement('script');
+			tag.src   = 'https://www.youtube.com/iframe_api';
+			document.head.appendChild(tag);
+			(window as any).onYouTubeIframeAPIReady = resolve;
+		});
+	}
+
+	async function initMusic() {
+		try {
+			await loadYouTubeAPI();
+			const host = document.createElement('div');
+			host.id    = 'yt-player-host';
+			host.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;bottom:0;left:0;';
+			document.body.appendChild(host);
+			ytPlayer = new (window as any).YT.Player('yt-player-host', {
+				videoId: YT_VIDEO_ID,
+				playerVars: { autoplay: 1, loop: 1, playlist: YT_VIDEO_ID, controls: 0, rel: 0, modestbranding: 1 },
+				events: {
+					onReady: (e: any) => { musicReady = true; musicPlaying = true; e.target.setVolume(60); e.target.playVideo(); },
+					onStateChange: (e: any) => { musicPlaying = e.data === 1; },
+					onError: () => { musicReady = false; },
+				},
+			});
+		} catch {}
+	}
+
+	function toggleMusic() {
+		if (!ytPlayer) { initMusic(); return; }
+		if (musicPlaying) { ytPlayer.pauseVideo(); }
+		else              { ytPlayer.playVideo();  }
+	}
 
 	// ── Sound (Web Audio — synthetic Mac keyboard click) ───────────────────────
 	const SOUND_KEY = 'shravan-sound';
@@ -438,6 +481,7 @@
 		'glitch', 'hack', 'ascii', 'screenshot',
 		'changelog', 'version', 'easter', 'secrets', 'hint',
 		'sound on', 'sound off', 'sound',
+		'music', 'music on', 'music off', 'music play', 'music stop', 'music pause', 'music info', 'nowplaying', 'np',
 		'neofetch', 'contact',
 		'open github', 'open linkedin', 'open email',
 		'man shravan', 'man help', 'man ls', 'man cat', 'man git',
@@ -509,6 +553,8 @@
 			{ t: 'out', text: '  font <name>           switch terminal font', dim: true },
 			{ t: 'out', text: '  typetest  (or: tt)    typing speed test', dim: true },
 			{ t: 'out', text: '  glitch · hack         try them', dim: true },
+			{ t: 'out', text: '  music                 toggle background track', dim: true },
+			{ t: 'out', text: '  nowplaying  (np)      track info', dim: true },
 			{ t: 'out', text: '  man <cmd>             manual pages', dim: true },
 			{ t: 'out', text: '  ps aux · env · alias · fortune · share', dim: true },
 			{ t: 'out', text: '  date · history · clear · uname -a', dim: true },
@@ -875,6 +921,36 @@
 		// ── sound ──
 		if (cmd === 'sound on' || cmd === 'sound') { soundEnabled = true; try { localStorage.setItem(SOUND_KEY, '1'); } catch {} return [{ t: 'blank' }, { t: 'out', text: '  keyboard sounds on', green: true }, { t: 'blank' }]; }
 		if (cmd === 'sound off') { soundEnabled = false; try { localStorage.setItem(SOUND_KEY, '0'); } catch {} return [{ t: 'blank' }, { t: 'out', text: '  keyboard sounds off', dim: true }, { t: 'blank' }]; }
+
+		// ── music ──
+		if (cmd === 'music' || cmd === 'music play' || cmd === 'music on') {
+			if (!musicReady && !ytPlayer) {
+				// async — can't await here, so push feedback and fire
+				setTimeout(() => initMusic(), 0);
+				try { localStorage.setItem(MUSIC_KEY, 'on'); } catch {}
+				return [{ t: 'blank' }, { t: 'out', text: '  ♫ loading  konfused kid — chenda bass...', green: true }, { t: 'blank' }];
+			}
+			toggleMusic();
+			try { localStorage.setItem(MUSIC_KEY, musicPlaying ? 'off' : 'on'); } catch {}
+			return [{ t: 'blank' }, { t: 'out', text: musicPlaying ? '  ♫ pausing...' : '  ♫ playing  konfused kid — chenda bass', ...(musicPlaying ? { dim: true } : { green: true }) }, { t: 'blank' }];
+		}
+		if (cmd === 'music off' || cmd === 'music stop' || cmd === 'music pause') {
+			if (ytPlayer && musicPlaying) ytPlayer.pauseVideo();
+			try { localStorage.setItem(MUSIC_KEY, 'off'); } catch {}
+			return [{ t: 'blank' }, { t: 'out', text: '  ♫ paused', dim: true }, { t: 'blank' }];
+		}
+		if (cmd === 'music info' || cmd === 'nowplaying' || cmd === 'np') {
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: '  ♫ NOW PLAYING', accent: true },
+				{ t: 'out', text: '     konfused kid — chenda bass', green: true },
+				{ t: 'out', text: '     youtube.com/watch?v=ZUuVHJbHIqY', dim: true },
+				{ t: 'blank' },
+				{ t: 'out', text: `  status: ${musicPlaying ? 'playing' : musicReady ? 'paused' : 'stopped'}`, dim: true },
+				{ t: 'out', text: '  music  to toggle  ·  music off  to stop', dim: true },
+				{ t: 'blank' },
+			];
+		}
 
 		// ── typetest best ──
 		if (cmd === 'typetest --best' || cmd === 'tt --best' || cmd === 'tt best') {
@@ -1695,6 +1771,23 @@
 		}
 
 		if (!isMobile) inputEl?.focus();
+
+		// music prompt / auto-resume
+		const musicPref = localStorage.getItem(MUSIC_KEY);
+		if (musicPref === 'on') {
+			// returning visitor who said yes — auto-start quietly
+			setTimeout(() => initMusic(), 800);
+		} else if (!musicPref && !isReturning && !isMobile) {
+			// first desktop visit, no preference yet — ask
+			await sleep(700);
+			await push(
+				{ t: 'blank' },
+				{ t: 'out', text: '  ♫  want background music while you explore?', accent: true },
+				{ t: 'out', text: '     konfused kid — chenda bass   (y/n)', dim: true },
+				{ t: 'blank' },
+			);
+			musicPromptActive = true;
+		}
 	}
 
 	// ── Input handlers ────────────────────────────────────────────────────────
@@ -1709,6 +1802,21 @@
 		// haptic on mobile
 		try { if (isMobile && navigator.vibrate) navigator.vibrate(8); } catch {}
 		playClick(true);
+
+		// music prompt (y/n)
+		if (musicPromptActive) {
+			musicPromptActive = false;
+			const yes = lc === 'y' || lc === 'yes';
+			try { localStorage.setItem(MUSIC_KEY, yes ? 'on' : 'off'); } catch {}
+			await push({ t: 'prompt', cmd: raw });
+			if (yes) {
+				await push({ t: 'blank' }, { t: 'out', text: '  ♫ loading chenda bass...', green: true }, { t: 'blank' });
+				await initMusic();
+			} else {
+				await push({ t: 'blank' }, { t: 'out', text: '  ok. type: music  to play anytime', dim: true }, { t: 'blank' });
+			}
+			return;
+		}
 
 		// wizard step handler
 		if (wizard) {
@@ -2012,6 +2120,17 @@
 	<!-- statusbar -->
 	<div class="statusbar" aria-hidden="true">
 		<span class="sb-avail">◉ available</span>
+		{#if musicReady}
+			<span class="sb-div">│</span>
+			<span
+				class="sb-music"
+				class:sb-music-playing={musicPlaying}
+				onclick={toggleMusic}
+				role="button"
+				tabindex="-1"
+				title={musicPlaying ? 'pause music' : 'play music'}
+			>♫ {musicPlaying ? 'chenda bass' : '⏸'}</span>
+		{/if}
 		<span class="sb-fill"></span>
 		{#if !isMobile}<span class="sb-hint">tab · ↑↓ · ctrl+l</span><span class="sb-div">│</span>{/if}
 		{#if !isMobile}<span class="sb-name">shravan omanakuttan</span><span class="sb-div">│</span>{/if}
@@ -2267,5 +2386,9 @@
 	.sb-font  { color: var(--dim, #7c6f64); opacity: 0.7; }
 	.sb-sound { color: var(--dim, #7c6f64); opacity: 0.7; cursor: pointer; user-select: none; transition: opacity 0.15s; }
 	.sb-sound:hover { opacity: 1; color: var(--accent); }
+	.sb-music { color: var(--dim, #7c6f64); opacity: 0.7; cursor: pointer; user-select: none; transition: opacity 0.15s, color 0.15s; font-size: 10.5px; }
+	.sb-music:hover { opacity: 1; }
+	.sb-music.sb-music-playing { color: var(--green); opacity: 1; animation: music-pulse 2.4s ease-in-out infinite; }
+	@keyframes music-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 	.sb-clock { color: var(--dim, #7c6f64); font-variant-numeric: tabular-nums; }
 </style>
