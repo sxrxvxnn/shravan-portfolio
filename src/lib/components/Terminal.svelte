@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { resume } from '$lib/data/resume.js';
+	import { preloaderDone } from '$lib/stores/preloader';
 
 	type Line =
 		| { t: 'prompt'; cmd: string }
@@ -1109,18 +1110,27 @@
 	}
 
 	// ── Auto-play boot sequence ────────────────────────────────────────────────
+	async function awaitPreloader() {
+		// Resolves the moment layout sets preloaderDone=true (or immediately if already done)
+		return new Promise<void>(resolve => {
+			const unsub = preloaderDone.subscribe(v => {
+				if (v) { unsub(); resolve(); }
+			});
+		});
+	}
+
 	async function autoPlay(isReturning: boolean) {
-		// ── RETURNING VISITOR: pre-load in background while preloader plays ────
-		// site-wrap is opacity:0 until Preloader calls onDone (~4.5s),
-		// so we load instantly — terminal is ready before user sees it.
-		if (isReturning) {
+		// ── RETURNING or MOBILE: instant load in background while preloader plays ──
+		// site-wrap is opacity:0, so terminal loads invisibly before user sees it.
+		// On mobile we skip the cinematic ASCII boot — too slow and blank-looking.
+		if (isReturning || isMobile) {
 			try {
 				const saved = localStorage.getItem(LINES_KEY);
 				if (saved) lines = JSON.parse(saved);
 			} catch {}
 			await push(
 				{ t: 'blank' },
-				{ t: 'out', text: '  welcome back.', accent: true },
+				{ t: 'out', text: isReturning ? '  welcome back.' : '  shravan-os v2.0.0  ·  sveltekit', accent: true },
 				{ t: 'out', text: '  help · help --recruiter · cat sonar', dim: true },
 				{ t: 'blank' },
 			);
@@ -1134,10 +1144,11 @@
 			return;
 		}
 
-		// ── FIRST VISIT: wait for preloader fade-out to complete ─────────────
-		// Preloader calls onDone at ~4525ms, site-wrap CSS transition: 500ms.
-		// 5200ms aligns terminal boot with site becoming fully visible.
-		await sleep(5200);
+		// ── FIRST VISIT on DESKTOP: await real preloader signal ──────────────
+		// Wait for Preloader to call onDone → preloaderDone=true, then a brief
+		// 100ms buffer so the site-wrap CSS fade starts, then begin boot animation.
+		await awaitPreloader();
+		await sleep(100);
 		await bootLines([
 			{ t: 'blank' },
 			{ t: 'out', text: '  ███████╗██╗  ██╗██████╗  █████╗ ██╗   ██╗ █████╗ ███╗  ██╗', dim: true },
@@ -1333,6 +1344,12 @@
 					<span class="cursor" aria-hidden="true"></span>
 				</div>
 			{/if}
+		{:else if busy}
+			<!-- mobile: show cursor while loading so it's never blank -->
+			<div class="input-line mob-busy-cursor">
+				<span class="prompt-txt">$</span>
+				<span class="cursor" aria-hidden="true"></span>
+			</div>
 		{/if}
 	</div>
 
@@ -1511,6 +1528,11 @@
 	.hidden-input {
 		position: absolute; opacity: 0; pointer-events: none;
 		width: 1px; height: 1px; top: 0; left: 0;
+	}
+
+	.mob-busy-cursor {
+		padding: 16px 14px 8px;
+		opacity: 0.6;
 	}
 
 	/* mobile chips */

@@ -6,6 +6,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import Lenis from 'lenis';
+	import { preloaderDone } from '$lib/stores/preloader';
 
 	let { children } = $props();
 	let siteReady = $state(false);
@@ -14,7 +15,21 @@
 	const SITE_URL = 'https://shravanomanakuttan.vercel.app';
 	const OG_IMAGE = `${SITE_URL}/og.svg`;
 
+	function handlePreloaderDone() {
+		siteReady = true;
+		preloaderDone.set(true);
+	}
+
 	onMount(() => {
+		// Failsafe: if Preloader never calls onDone (canvas crash, font timeout, etc.)
+		// force show after 8s so site is never permanently blank
+		const failsafe = setTimeout(() => {
+			if (!siteReady) {
+				siteReady = true;
+				preloaderDone.set(true);
+			}
+		}, 8000);
+
 		const c = document.createElement('canvas');
 		c.width = c.height = 256;
 		const ctx = c.getContext('2d')!;
@@ -30,7 +45,7 @@
 		const lenis = new Lenis({ duration: 1.2, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
 		function raf(time: number) { lenis.raf(time); requestAnimationFrame(raf); }
 		requestAnimationFrame(raf);
-		return () => lenis.destroy();
+		return () => { clearTimeout(failsafe); lenis.destroy(); };
 	});
 
 	onNavigate((navigation) => {
@@ -77,7 +92,7 @@
 <Cursor />
 
 {#if browser}
-	<Preloader onDone={() => (siteReady = true)} />
+	<Preloader onDone={handlePreloaderDone} />
 {/if}
 
 {#if noiseUrl}
