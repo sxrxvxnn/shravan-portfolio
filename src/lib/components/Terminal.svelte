@@ -145,13 +145,15 @@
 		'help', 'help --recruiter', 'whoami', 'ls', 'ls projects', 'ls -la',
 		'skills', 'status', 'contact', 'neofetch', 'matrix', 'clear', 'cls',
 		'exit', 'history', 'date', 'uname -a', 'experience', 'tree', 'schedule',
-		'git log', 'vim', 'cowsay hire me',
+		'git log', 'vim', 'cowsay hire me', 'fortune', 'alias', 'env', 'ps aux',
 		'ssh root@google.com', 'ping faang.com', 'ping google.com',
 		'curl wttr.in/trivandrum', 'cat resume', 'open resume', 'download resume',
-		'sudo hire shravan',
+		'cat .gitconfig', 'share',
+		'sudo hire shravan', 'sudo make me a sandwich',
 		'theme gruvbox', 'theme tokyo', 'theme dracula',
 		'open github', 'open linkedin', 'open email',
 		'man shravan', 'man help', 'man ls', 'man cat', 'man git',
+		'export HIRED=true',
 		...PROJECT_KEYS.map(k => `cat ${k}`),
 		...PROJECT_KEYS.map(k => `open ${k}`),
 	];
@@ -197,6 +199,7 @@
 			{ t: 'out', text: '  download resume       save PDF', dim: true },
 			{ t: 'out', text: '  theme <gruvbox|tokyo|dracula>', dim: true },
 			{ t: 'out', text: '  man <cmd>             manual pages', dim: true },
+			{ t: 'out', text: '  ps aux · env · alias · fortune · share', dim: true },
 			{ t: 'out', text: '  date · history · clear · uname -a', dim: true },
 			{ t: 'blank' },
 			{ t: 'out', text: '  help --recruiter      not a dev? start here ↓', accent: true },
@@ -762,6 +765,132 @@
 		if (cmd === 'clear' || cmd === 'cls') { lines = []; return []; }
 		if (cmd === 'exit') return [{ t: 'blank' }, { t: 'out', text: 'there is no escape.', dim: true }, { t: 'blank' }];
 
+		// ── ps aux ──
+		if (cmd === 'ps aux' || cmd === 'ps') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'USER       PID  %CPU  %MEM  COMMAND', dim: true },
+			{ t: 'out', text: 'shravan      1   0.0   0.1  init: shravan-os' },
+			{ t: 'out', text: 'shravan    142  12.4   2.3  sonar-backend (fastapi)', green: true },
+			{ t: 'out', text: 'shravan    143   8.1   3.1  sonar-frontend (vite)', green: true },
+			{ t: 'out', text: 'shravan    209   0.3   0.2  chrome-ext (mv3 service-worker)' },
+			{ t: 'out', text: 'shravan    314  34.7   4.2  groq-inference (llm-calls)', yellow: true },
+			{ t: 'out', text: 'shravan    411   0.0   0.1  coffee-daemon (idle)', dim: true },
+			{ t: 'out', text: 'shravan    512   0.0   0.0  sleep-scheduler (ZOMBIE)', dim: true },
+			{ t: 'out', text: 'shravan    847  99.9  12.0  ambition (unkillable)', accent: true },
+			{ t: 'blank' },
+		];
+
+		// ── env ──
+		if (cmd === 'env' || cmd === 'printenv') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'USER=shravan' },
+			{ t: 'out', text: 'SHELL=sveltekit-zsh', dim: true },
+			{ t: 'out', text: 'EDITOR=vim  # regrets this daily', dim: true },
+			{ t: 'out', text: 'COFFEE_LEVEL=critical', yellow: true },
+			{ t: 'out', text: 'SLEEP_MODE=off', dim: true },
+			{ t: 'out', text: 'SHIPPING_VELOCITY=max', green: true },
+			{ t: 'out', text: 'NODE_ENV=production', green: true },
+			{ t: 'out', text: 'AVAILABLE_FROM=2026', accent: true },
+			{ t: 'out', text: 'SALARY_EXPECTATIONS=[REDACTED]', dim: true },
+			{ t: 'out', text: 'HIRED=false  # fix this', yellow: true },
+			{ t: 'blank' },
+		];
+
+		// ── alias ──
+		if (cmd === 'alias') return [
+			{ t: 'blank' },
+			{ t: 'out', text: "alias ship='git add . && git commit -m \"feat: ship it\" && git push'", dim: true },
+			{ t: 'out', text: "alias gs='git status'", dim: true },
+			{ t: 'out', text: "alias yolo='git push --force'  # never used, promise", dim: true },
+			{ t: 'out', text: "alias python='python3'", dim: true },
+			{ t: 'out', text: "alias please='sudo'", dim: true },
+			{ t: 'out', text: "alias hire='open email'", green: true },
+			{ t: 'blank' },
+		];
+
+		// ── fortune ──
+		if (cmd === 'fortune') {
+			const quotes = [
+				'"Premature optimization is the root of all evil." — Knuth',
+				'"Make it work, make it right, make it fast." — Kent Beck',
+				'"Code is read more than it is written." — Guido van Rossum',
+				'"The best code is no code at all." — Jeff Atwood',
+				'"Ship it." — everyone who has ever met a deadline',
+				'"It works on my machine." — also shravan, sometimes',
+				'"sudo hire shravan" — a wise recruiter, probably',
+			];
+			const q = quotes[Math.floor(Math.random() * quotes.length)];
+			return [{ t: 'blank' }, { t: 'out', text: `  ${q}` }, { t: 'blank' }];
+		}
+
+		// ── sudo make me a sandwich ──
+		if (cmd === 'sudo make me a sandwich' || cmd === 'sudo make sandwich') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'okay.', green: true },
+			{ t: 'blank' },
+		];
+		if (cmd === 'make me a sandwich' || cmd === 'make sandwich') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'what? make it yourself.', dim: true },
+			{ t: 'blank' },
+		];
+
+		// ── cat .gitconfig ──
+		if (cmd === 'cat .gitconfig' || cmd === 'cat ~/.gitconfig') return [
+			{ t: 'blank' },
+			{ t: 'out', text: '[user]', accent: true },
+			{ t: 'out', text: '    name  = Shravan Omanakuttan' },
+			{ t: 'out', text: '    email = shravanomanakuttan@gmail.com', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '[core]', accent: true },
+			{ t: 'out', text: '    editor = vim  ; this was a mistake' },
+			{ t: 'blank' },
+			{ t: 'out', text: '[alias]', accent: true },
+			{ t: 'out', text: '    ship   = !git add . && git commit -m "feat: ship" && git push' },
+			{ t: 'out', text: '    oops   = commit --amend --no-edit', dim: true },
+			{ t: 'out', text: '    please = push --force-with-lease', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '[push]', accent: true },
+			{ t: 'out', text: '    default = current', dim: true },
+			{ t: 'blank' },
+		];
+
+		// ── share ──
+		if (cmd === 'share' || cmd.startsWith('share ')) {
+			const shareCmd = cmd === 'share'
+				? (cmdHistory[1] ?? 'whoami')
+				: cmd.slice(6).trim();
+			const url = `${window.location.origin}/?cmd=${encodeURIComponent(shareCmd)}`;
+			try { navigator.clipboard.writeText(url); } catch {}
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: 'shareable link:', accent: true },
+				{ t: 'out', text: `  ${url}`, dim: true },
+				{ t: 'out', text: '  (copied to clipboard)', green: true },
+				{ t: 'blank' },
+				{ t: 'out', text: 'tip: share <command>  e.g.  share cat sonar', dim: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── rm -rf ──
+		if (cmd.startsWith('rm -rf') || cmd.startsWith('rm -r')) return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'rm: cannot remove \'/\': permission denied (thank god)', dim: true },
+			{ t: 'out', text: 'tip: clear  to wipe the terminal', dim: true },
+			{ t: 'blank' },
+		];
+
+		// ── export ──
+		if (cmd.startsWith('export hired=true') || cmd === 'export hired=1') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'HIRED=true', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: 'great. now send an email to make it official.', accent: true },
+			{ t: 'out', text: '  shravanomanakuttan@gmail.com', dim: true },
+			{ t: 'blank' },
+		];
+
 		return [
 			{ t: 'blank' },
 			{ t: 'out', text: `command not found: ${raw.trim()}` },
@@ -837,9 +966,14 @@
 		const cmd = inputValue.trim();
 		cmdHistory = [cmd, ...cmdHistory.slice(0, 49)];
 		histIdx    = -1;
-		push({ t: 'prompt', cmd });
 		const lc = cmd.toLowerCase();
-		if (lc !== 'clear' && lc !== 'cls') push(...runCommand(cmd));
+		if (lc === 'clear' || lc === 'cls') {
+			lines = [];
+			inputValue = '';
+			return;
+		}
+		push({ t: 'prompt', cmd });
+		push(...runCommand(cmd));
 		inputValue = '';
 	}
 
