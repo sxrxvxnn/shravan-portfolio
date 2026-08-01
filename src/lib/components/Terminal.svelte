@@ -20,7 +20,9 @@
 	let cmdHistory: string[] = [];
 	let histIdx = -1;
 
-	const PROMPT = 'shravan@portfolio:~$';
+	const PROMPT     = 'shravan@portfolio:~$';
+	const THEME_KEY  = 'shravan-theme';
+	const VISITED_KEY = 'shravan-visited';
 
 	type Theme = { accent: string; glow: string; green: string; greenGlow: string; name: string };
 	const THEMES: Record<string, Theme> = {
@@ -29,6 +31,10 @@
 		dracula: { accent: '#ff79c6', glow: 'rgba(255,121,198,0.45)', green: '#50fa7b', greenGlow: 'rgba(80,250,123,0.4)',  name: 'dracula' },
 	};
 	let currentTheme = $state(THEMES.gruvbox);
+
+	// Konami code tracker
+	const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+	let konamiIdx = 0;
 
 	// ── Matrix rain ───────────────────────────────────────────────────────────
 	$effect(() => {
@@ -136,15 +142,16 @@
 
 	// ── Tab completion ─────────────────────────────────────────────────────────
 	const COMPLETIONS = [
-		'help', 'help --recruiter', 'whoami', 'ls', 'ls projects',
+		'help', 'help --recruiter', 'whoami', 'ls', 'ls projects', 'ls -la',
 		'skills', 'status', 'contact', 'neofetch', 'matrix', 'clear', 'cls',
-		'exit', 'history', 'date', 'uname -a',
+		'exit', 'history', 'date', 'uname -a', 'experience', 'tree', 'schedule',
 		'git log', 'vim', 'cowsay hire me',
 		'ssh root@google.com', 'ping faang.com', 'ping google.com',
-		'curl wttr.in/trivandrum', 'cat resume',
+		'curl wttr.in/trivandrum', 'cat resume', 'open resume', 'download resume',
 		'sudo hire shravan',
 		'theme gruvbox', 'theme tokyo', 'theme dracula',
 		'open github', 'open linkedin', 'open email',
+		'man shravan', 'man help', 'man ls', 'man cat', 'man git',
 		...PROJECT_KEYS.map(k => `cat ${k}`),
 		...PROJECT_KEYS.map(k => `open ${k}`),
 	];
@@ -173,20 +180,24 @@
 			{ t: 'blank' },
 			{ t: 'out', text: 'COMMANDS', accent: true },
 			{ t: 'out', text: '  whoami                about me', dim: true },
+			{ t: 'out', text: '  experience            work history', dim: true },
 			{ t: 'out', text: '  ls projects           list projects', dim: true },
+			{ t: 'out', text: '  ls -la                all files (including hidden)', dim: true },
 			{ t: 'out', text: '  cat <project>         project details', dim: true },
 			{ t: 'out', text: '  open <project|link>   open in browser', dim: true },
 			{ t: 'out', text: '  skills                tech stack', dim: true },
 			{ t: 'out', text: '  status                availability', dim: true },
 			{ t: 'out', text: '  neofetch              system info', dim: true },
-			{ t: 'out', text: '  git log               project history', dim: true },
+			{ t: 'out', text: '  tree                  project directory', dim: true },
+			{ t: 'out', text: '  git log               commit history', dim: true },
 			{ t: 'out', text: '  matrix                ???', dim: true },
 			{ t: 'out', text: '  contact               get in touch', dim: true },
-			{ t: 'out', text: '  theme <gruvbox|tokyo|dracula>  switch theme', dim: true },
-			{ t: 'out', text: '  date                  current date/time', dim: true },
+			{ t: 'out', text: '  schedule              book a call', dim: true },
 			{ t: 'out', text: '  cat resume            view CV', dim: true },
-			{ t: 'out', text: '  cowsay <msg>          important messages', dim: true },
-			{ t: 'out', text: '  history · clear · uname -a', dim: true },
+			{ t: 'out', text: '  download resume       save PDF', dim: true },
+			{ t: 'out', text: '  theme <gruvbox|tokyo|dracula>', dim: true },
+			{ t: 'out', text: '  man <cmd>             manual pages', dim: true },
+			{ t: 'out', text: '  date · history · clear · uname -a', dim: true },
 			{ t: 'blank' },
 			{ t: 'out', text: '  help --recruiter      not a dev? start here ↓', accent: true },
 			{ t: 'blank' },
@@ -203,7 +214,7 @@
 			{ t: 'out', text: '  WHO', accent: true },
 			{ t: 'out', text: '    Shravan Omanakuttan' },
 			{ t: 'out', text: '    SWE Intern @ Beagle Security (security SaaS)' },
-			{ t: 'out', text: '    B.Tech CS & AI — SRM University, Chennai' },
+			{ t: 'out', text: '    B.Tech CS & AI — SRM University, Delhi-NCR' },
 			{ t: 'blank' },
 			{ t: 'out', text: '  WHAT HE BUILT', accent: true },
 			{ t: 'out', text: '    Sonar — replaced an $800/mo enterprise tool, solo, in 90 days.' },
@@ -216,7 +227,7 @@
 			{ t: 'out', text: '  AVAILABILITY', accent: true },
 			{ t: 'out', text: '    Available from 2026 · Open to relocate', green: true },
 			{ t: 'blank' },
-			{ t: 'out', text: '  NEXT STEP  →  open email  or  open linkedin', accent: true },
+			{ t: 'out', text: '  NEXT STEP  →  open email  or  schedule', accent: true },
 			{ t: 'blank' },
 		];
 
@@ -225,10 +236,35 @@
 			{ t: 'blank' },
 			{ t: 'out', text: 'Shravan Omanakuttan', accent: true },
 			{ t: 'out', text: 'SWE Intern — Beagle Security' },
-			{ t: 'out', text: 'B.Tech CS & AI — SRM University, Chennai' },
+			{ t: 'out', text: 'B.Tech CS & AI — SRM University, Delhi-NCR' },
 			{ t: 'out', text: 'Trivandrum, India  ·  open to relocate' },
 			{ t: 'blank' },
 			{ t: 'out', text: resume.about.bio },
+			{ t: 'blank' },
+		];
+
+		// ── experience ──
+		if (cmd === 'experience') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'EXPERIENCE', accent: true },
+			{ t: 'out', text: '──────────────────────────────────────────', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: 'Beagle Security                     Apr 2026 – Present', accent: true },
+			{ t: 'out', text: 'SWE Intern · Remote' },
+			{ t: 'blank' },
+			{ t: 'out', text: '  ▸ Built Sonar — replaced $800/mo Apollo.io sub, solo, 90 days', green: true },
+			{ t: 'out', text: '  ▸ 10+ modules shipped: Company Intel · Prospect Search · ICP Scoring' },
+			{ t: 'out', text: '  ▸ Multi-stage email enrichment: Hunter.io · Apollo · PDL · Groq' },
+			{ t: 'out', text: '  ▸ Chrome MV3 extension — one-click LinkedIn → Sonar sync' },
+			{ t: 'out', text: '  ▸ PostHog analytics for product usage + funnel tracking' },
+			{ t: 'blank' },
+			{ t: 'out', text: '  stack: FastAPI · React · Supabase · PostgreSQL · Vercel', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '──────────────────────────────────────────', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: 'SRM University Delhi-NCR             2022 – Present', accent: true },
+			{ t: 'out', text: 'B.Tech Computer Science & Engineering (AI & Data Science)' },
+			{ t: 'out', text: 'SGPA: 7.0 / 10.0', dim: true },
 			{ t: 'blank' },
 		];
 
@@ -244,14 +280,162 @@
 			{ t: 'blank' },
 		];
 
+		if (cmd === 'ls -la' || cmd === 'ls -al') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'total 42', dim: true },
+			{ t: 'out', text: 'drwxr-xr-x  shravan  staff   512B  ./', dim: true },
+			{ t: 'out', text: 'drwxr-xr-x  shravan  staff   864B  ../', dim: true },
+			{ t: 'out', text: 'drwxr-xr-x  shravan  staff   416B  sonar/', green: true },
+			{ t: 'out', text: 'drwxr-xr-x  shravan  staff   256B  lookalike-search/', green: true },
+			{ t: 'out', text: 'drwxr-xr-x  shravan  staff   128B  linkedin-pipeline/', green: true },
+			{ t: 'out', text: 'drwxr-xr-x  shravan  staff    96B  chrome-ext/', green: true },
+			{ t: 'out', text: '-rw-r--r--  shravan  staff   2.1K  .biography' },
+			{ t: 'out', text: '-rw-r--r--  shravan  staff   847B  .coffee-count', yellow: true },
+			{ t: 'out', text: '-rw-r--r--  shravan  staff   1.4K  .bugs-fixed', yellow: true },
+			{ t: 'out', text: '-rw-r--r--  shravan  staff     0B  .sleep-schedule          [DEPRECATED]', dim: true },
+			{ t: 'out', text: '-r--------  shravan  staff   ???   .salary-expectations     [cat: permission denied]', dim: true },
+			{ t: 'out', text: '-rw-r--r--  shravan  staff    64B  .ambitions               [recursive reference]', dim: true },
+			{ t: 'out', text: '-r--------  shravan  staff    12K  .secrets                 [cat: permission denied]', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  .coffee-count    → 847 cups (and counting)', yellow: true },
+			{ t: 'out', text: '  .bugs-fixed      → 1,247 (closed PRs disagree)', yellow: true },
+			{ t: 'out', text: '  .sleep-schedule  → [file empty since 2026]', dim: true },
+			{ t: 'blank' },
+		];
+
+		// ── tree ──
+		if (cmd === 'tree') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'shravan-portfolio/', accent: true },
+			{ t: 'out', text: '├── sonar/', green: true },
+			{ t: 'out', text: '│   ├── backend/        (FastAPI · Supabase · 8 API modules)' },
+			{ t: 'out', text: '│   ├── frontend/       (React · 10+ dashboard modules)' },
+			{ t: 'out', text: '│   └── chrome-ext/     (MV3 · TypeScript · real-time sync)' },
+			{ t: 'out', text: '├── lookalike-search/', green: true },
+			{ t: 'out', text: '│   ├── api/            (FastAPI · structured Groq inference)' },
+			{ t: 'out', text: '│   └── scorer/         (<2s end-to-end · no vector DB)' },
+			{ t: 'out', text: '├── linkedin-pipeline/', green: true },
+			{ t: 'out', text: '│   └── scraper/        (Playwright · SPA-aware · 1,200+ profiles)' },
+			{ t: 'out', text: '└── shravan-os/', accent: true },
+			{ t: 'out', text: '    ├── terminal/       (you are here)', dim: true },
+			{ t: 'out', text: '    └── matrix.rain     ← try: matrix', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '4 directories, 847 commits, 0 free weekends', dim: true },
+			{ t: 'blank' },
+		];
+
+		// ── man ──
+		if (verb === 'man') {
+			const manPages: Record<string, Line[]> = {
+				shravan: [
+					{ t: 'blank' },
+					{ t: 'out', text: 'SHRAVAN(1)              SHRAVAN-OS MANUAL              SHRAVAN(1)', accent: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'NAME' },
+					{ t: 'out', text: '       shravan - a software engineer who ships things', dim: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'SYNOPSIS' },
+					{ t: 'out', text: '       shravan [--hire] [--relocate] [--available]', dim: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'DESCRIPTION' },
+					{ t: 'out', text: '       Shravan Omanakuttan is a software engineer currently' },
+					{ t: 'out', text: '       running shravan-os v2.0.0 on SRM University hardware.' },
+					{ t: 'blank' },
+					{ t: 'out', text: '       Writes Python until 2am. Deploys at 9am.' },
+					{ t: 'out', text: '       Available from 2026. Open to relocate.' },
+					{ t: 'blank' },
+					{ t: 'out', text: 'OPTIONS' },
+					{ t: 'out', text: '       --hire        grants access to 90-day shipping velocity', green: true },
+					{ t: 'out', text: '       --relocate    works anywhere with good internet', dim: true },
+					{ t: 'out', text: '       --available   from 2026 · internships & full-time', dim: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'EXIT STATUS' },
+					{ t: 'out', text: '       0   if hired' },
+					{ t: 'out', text: '       1   if you don\'t reach out', dim: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'SEE ALSO' },
+					{ t: 'out', text: '       open(1), contact(1), sudo hire shravan(8)', dim: true },
+					{ t: 'blank' },
+				],
+				help: [
+					{ t: 'blank' },
+					{ t: 'out', text: 'HELP(1)                 SHRAVAN-OS MANUAL                 HELP(1)', accent: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'NAME' },
+					{ t: 'out', text: '       help - display available commands', dim: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'SYNOPSIS' },
+					{ t: 'out', text: '       help [--recruiter]', dim: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'DESCRIPTION' },
+					{ t: 'out', text: '       Without flags, lists all available terminal commands.' },
+					{ t: 'out', text: '       With --recruiter, shows a plain-english summary' },
+					{ t: 'out', text: '       for non-developers evaluating Shravan.' },
+					{ t: 'blank' },
+				],
+				ls: [
+					{ t: 'blank' },
+					{ t: 'out', text: 'LS(1)                   SHRAVAN-OS MANUAL                   LS(1)', accent: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'SYNOPSIS' },
+					{ t: 'out', text: '       ls [-la] [projects]', dim: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'DESCRIPTION' },
+					{ t: 'out', text: '       Lists projects. ls -la reveals hidden files.' },
+					{ t: 'out', text: '       Some files are redacted. That\'s intentional.', dim: true },
+					{ t: 'blank' },
+				],
+				cat: [
+					{ t: 'blank' },
+					{ t: 'out', text: 'CAT(1)                  SHRAVAN-OS MANUAL                  CAT(1)', accent: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'SYNOPSIS' },
+					{ t: 'out', text: '       cat <project|resume>', dim: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'DESCRIPTION' },
+					{ t: 'out', text: '       Outputs project details. cat resume opens the CV.' },
+					{ t: 'out', text: '       download resume saves a copy to your machine.', dim: true },
+					{ t: 'blank' },
+				],
+				git: [
+					{ t: 'blank' },
+					{ t: 'out', text: 'GIT(1)                  SHRAVAN-OS MANUAL                  GIT(1)', accent: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'SYNOPSIS' },
+					{ t: 'out', text: '       git log', dim: true },
+					{ t: 'out', text: '       git push   (easter egg)', dim: true },
+					{ t: 'blank' },
+					{ t: 'out', text: 'DESCRIPTION' },
+					{ t: 'out', text: '       git log shows Shravan\'s recent commit history.' },
+					{ t: 'out', text: '       git push is protected. nice try.', dim: true },
+					{ t: 'blank' },
+				],
+			};
+			const page = manPages[arg] || manPages[arg?.replace(/\(.*\)/, '')];
+			if (page) return page;
+			if (arg) return [
+				{ t: 'blank' },
+				{ t: 'out', text: `No manual entry for ${arg}`, dim: true },
+				{ t: 'out', text: 'try: man shravan  man help  man ls  man cat  man git', dim: true },
+				{ t: 'blank' },
+			];
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: 'usage: man <command>', dim: true },
+				{ t: 'out', text: 'try: man shravan', dim: true },
+				{ t: 'blank' },
+			];
+		}
+
 		// ── cat ──
 		if (verb === 'cat') {
 			if (arg === 'resume') {
-				window.open('https://github.com/sxrxvxnn', '_blank');
+				window.open('/resume.html', '_blank');
 				return [
 					{ t: 'blank' },
-					{ t: 'out', text: 'opening github profile...', green: true },
-					{ t: 'out', text: '  github.com/sxrxvxnn', dim: true },
+					{ t: 'out', text: 'opening resume...', green: true },
+					{ t: 'out', text: '  /resume.html', dim: true },
+					{ t: 'out', text: '  download resume  to save a copy', dim: true },
 					{ t: 'blank' },
 				];
 			}
@@ -278,6 +462,46 @@
 				{ t: 'blank' },
 			];
 		}
+
+		// ── download resume ──
+		if (cmd === 'download resume') {
+			const a = document.createElement('a');
+			a.href     = '/resume.html';
+			a.download = 'Shravan_Omanakuttan_Resume.html';
+			a.click();
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: 'downloading Shravan_Omanakuttan_Resume.html...', green: true },
+				{ t: 'out', text: '  print to PDF for best results', dim: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── open resume ──
+		if (cmd === 'open resume') {
+			window.open('/resume.html', '_blank');
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: 'opening resume in new tab...', green: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── schedule ──
+		if (cmd === 'schedule') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'SCHEDULE A CALL', accent: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  Preferred: email with your availability' },
+			{ t: 'out', text: '  shravanomanakuttan@gmail.com', accent: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  Timezone: IST (UTC +5:30)', dim: true },
+			{ t: 'out', text: '  Available: Mon–Fri · flexible hours', dim: true },
+			{ t: 'out', text: '  Response time: < 12 hours', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  open email  to send directly', dim: true },
+			{ t: 'blank' },
+		];
 
 		// ── skills ──
 		if (cmd === 'skills') return [
@@ -316,7 +540,7 @@
 			{ t: 'out', text: '  github     github.com/sxrxvxnn' },
 			{ t: 'out', text: '  linkedin   linkedin.com/in/shravanomanakuttan' },
 			{ t: 'blank' },
-			{ t: 'out', text: 'open github · open linkedin · open email', dim: true },
+			{ t: 'out', text: 'open github · open linkedin · open email · schedule', dim: true },
 			{ t: 'blank' },
 		];
 
@@ -497,7 +721,11 @@
 		// ── theme ──
 		if (verb === 'theme') {
 			const t = THEMES[arg];
-			if (t) { currentTheme = t; return [{ t: 'blank' }, { t: 'out', text: `theme → ${arg}`, green: true }, { t: 'blank' }]; }
+			if (t) {
+				currentTheme = t;
+				if (typeof localStorage !== 'undefined') localStorage.setItem(THEME_KEY, arg);
+				return [{ t: 'blank' }, { t: 'out', text: `theme → ${arg}`, green: true }, { t: 'blank' }];
+			}
 			return [{ t: 'blank' }, { t: 'out', text: 'themes: gruvbox  tokyo  dracula', dim: true }, { t: 'blank' }];
 		}
 
@@ -528,7 +756,7 @@
 			if (proj) { window.open(proj.url, '_blank'); return [{ t: 'blank' }, { t: 'out', text: `opening ${proj.name}...`, green: true }, { t: 'blank' }]; }
 			const url = links[arg];
 			if (url)  { window.open(url, '_blank'); return [{ t: 'blank' }, { t: 'out', text: `opening ${arg}...`, green: true }, { t: 'blank' }]; }
-			return [{ t: 'blank' }, { t: 'out', text: `unknown: ${arg}. try: github  linkedin  email  sonar`, dim: true }, { t: 'blank' }];
+			return [{ t: 'blank' }, { t: 'out', text: `unknown: ${arg}. try: github  linkedin  email  resume`, dim: true }, { t: 'blank' }];
 		}
 
 		if (cmd === 'clear' || cmd === 'cls') { lines = []; return []; }
@@ -542,8 +770,26 @@
 		];
 	}
 
+	// ── Konami Easter egg ─────────────────────────────────────────────────────
+	function konamiEasterEgg(): Line[] {
+		return [
+			{ t: 'blank' },
+			{ t: 'out', text: '  ▲ ▲ ▼ ▼ ◀ ▶ ◀ ▶ B A', accent: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  [CHEAT CODE ACTIVATED]', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  Unlimited coffee: ENABLED', green: true },
+			{ t: 'out', text: '  Sleep requirement: DISABLED', dim: true },
+			{ t: 'out', text: '  Bug resistance: +99', green: true },
+			{ t: 'out', text: '  Shipping velocity: MAX', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  "just ship it" unlocked as core ability.', dim: true },
+			{ t: 'blank' },
+		];
+	}
+
 	// ── Auto-play boot sequence ────────────────────────────────────────────────
-	async function autoPlay() {
+	async function autoPlay(isReturning: boolean) {
 		await sleep(6000);
 		await bootLines([
 			{ t: 'blank' },
@@ -555,7 +801,9 @@
 			{ t: 'out', text: '  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝╚═╝  ╚══╝', dim: true },
 			{ t: 'blank' },
 			{ t: 'out', text: '  shravan-os v2.0.0  ·  sveltekit · three.js · gsap', dim: true },
-			{ t: 'out', text: '  type  help  ·  help --recruiter  if you\'re hiring', dim: true },
+			isReturning
+				? { t: 'out', text: '  welcome back.', accent: true }
+				: { t: 'out', text: '  type  help  ·  help --recruiter  if you\'re hiring', dim: true },
 			{ t: 'blank' },
 		], 48);
 
@@ -570,6 +818,16 @@
 		await push(...runCommand('cat sonar'));
 		busy = false;
 		await tick();
+
+		// handle ?cmd= shareable URL
+		const urlParams = new URLSearchParams(window.location.search);
+		const cmdParam  = urlParams.get('cmd');
+		if (cmdParam) {
+			await sleep(400);
+			await typeCommand(cmdParam, 42);
+			await push(...runCommand(cmdParam));
+		}
+
 		if (!isMobile) inputEl?.focus();
 	}
 
@@ -588,16 +846,35 @@
 	function onKey(e: KeyboardEvent) {
 		if (e.key === 'Enter')     { submit(); return; }
 		if (e.key === 'Tab')       { e.preventDefault(); if (!busy) tabComplete(); return; }
-		if (e.key === 'ArrowUp')   { e.preventDefault(); histIdx = Math.min(histIdx + 1, cmdHistory.length - 1); inputValue = cmdHistory[histIdx] ?? ''; }
-		if (e.key === 'ArrowDown') { e.preventDefault(); histIdx = Math.max(histIdx - 1, -1); inputValue = histIdx === -1 ? '' : cmdHistory[histIdx]; }
-		if (e.ctrlKey && e.key === 'l') { e.preventDefault(); lines = []; }
-		if (e.ctrlKey && e.key === 'c') { inputValue = ''; }
+		if (e.key === 'ArrowUp')   { e.preventDefault(); histIdx = Math.min(histIdx + 1, cmdHistory.length - 1); inputValue = cmdHistory[histIdx] ?? ''; return; }
+		if (e.key === 'ArrowDown') { e.preventDefault(); histIdx = Math.max(histIdx - 1, -1); inputValue = histIdx === -1 ? '' : cmdHistory[histIdx]; return; }
+		if (e.ctrlKey && e.key === 'l') { e.preventDefault(); lines = []; return; }
+		if (e.ctrlKey && e.key === 'c') { inputValue = ''; return; }
+
+		// Konami code detector
+		if (e.key === KONAMI[konamiIdx]) {
+			konamiIdx++;
+			if (konamiIdx === KONAMI.length) {
+				konamiIdx = 0;
+				push(...konamiEasterEgg());
+			}
+		} else {
+			konamiIdx = 0;
+		}
 	}
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 	onMount(() => {
 		isMobile = window.innerWidth < 768;
 		window.addEventListener('resize', () => { isMobile = window.innerWidth < 768; });
+
+		// restore saved theme
+		const savedTheme = localStorage.getItem(THEME_KEY);
+		if (savedTheme && THEMES[savedTheme]) currentTheme = THEMES[savedTheme];
+
+		// returning visitor flag
+		const isReturning = localStorage.getItem(VISITED_KEY) === '1';
+		localStorage.setItem(VISITED_KEY, '1');
 
 		const tick = () => {
 			const now = new Date();
@@ -606,7 +883,7 @@
 		tick();
 		const clockInterval = setInterval(tick, 1000);
 
-		autoPlay();
+		autoPlay(isReturning);
 		return () => clearInterval(clockInterval);
 	});
 </script>
@@ -620,7 +897,7 @@
 	onkeydown={() => {}}
 	role="main"
 >
-	<!-- scanlines -->
+	<!-- scanlines + CRT flicker -->
 	<div class="scanlines" aria-hidden="true"></div>
 	<!-- vignette -->
 	<div class="vignette"  aria-hidden="true"></div>
@@ -724,7 +1001,17 @@
 			0deg, transparent, transparent 2px,
 			rgba(0,0,0,0.035) 2px, rgba(0,0,0,0.035) 4px
 		);
+		animation: crt-flicker 9s ease infinite;
 	}
+
+	@keyframes crt-flicker {
+		0%, 93%, 100% { opacity: 1; }
+		94%            { opacity: 0.92; }
+		95%            { opacity: 1; }
+		96.5%          { opacity: 0.95; }
+		97%            { opacity: 1; }
+	}
+
 	.vignette {
 		position: fixed; inset: 0; pointer-events: none; z-index: 20;
 		background: radial-gradient(ellipse at 50% 40%, transparent 58%, rgba(0,0,0,0.6) 100%);

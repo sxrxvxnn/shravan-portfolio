@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shravan Omanakuttan — Resume</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold:   #b8860b;
+    --ink:    #1a1a1a;
+    --muted:  #555;
+    --light:  #888;
+    --rule:   #d4c5a9;
+    --bg:     #fdfcf8;
+    --mono:   'JetBrains Mono', 'Courier New', monospace;
+    --sans:   'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  html { font-size: 10.5px; }
+
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: #e8e3d8;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    width: 794px;
+    min-height: 1123px;
+    margin: 0 auto;
+    background: var(--bg);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────── */
+  .header {
+    padding: 28px 36px 22px;
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+  }
+
+  .header-left { flex: 1; }
+
+  .name-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 3px;
+  }
+
+  .name-prompt {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .role {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .contact {
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    align-items: center;
+  }
+
+  .contact a {
+    color: var(--gold);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .contact a:hover { text-decoration: underline; }
+
+  .contact .sep { color: var(--rule); }
+
+  .availability-badge {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--gold);
+    border: 1.5px solid var(--gold);
+    padding: 4px 10px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* ── BODY ────────────────────────────────────────────────── */
+  .body {
+    display: flex;
+    flex: 1;
+  }
+
+  /* LEFT 63% */
+  .left {
+    flex: 0 0 63%;
+    padding: 20px 24px 20px 36px;
+    border-right: 1px solid var(--rule);
+  }
+
+  /* RIGHT 37% */
+  .right {
+    flex: 0 0 37%;
+    padding: 20px 28px 20px 20px;
+  }
+
+  /* ── SECTION ─────────────────────────────────────────────── */
+  section { margin-bottom: 18px; }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  h2::before { content: '──'; font-weight: 400; letter-spacing: -0.05em; }
+  h2::after  { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+  /* ── ENTRY (experience) ──────────────────────────────────── */
+  .entry { margin-bottom: 14px; }
+
+  .entry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-bottom: 1px;
+  }
+
+  .entry-company {
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--ink);
+  }
+
+  .entry-dates {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .entry-role {
+    font-size: 10.5px;
+    font-style: italic;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  ul li {
+    font-size: 10.5px;
+    line-height: 1.57;
+    padding-left: 12px;
+    position: relative;
+    margin-bottom: 3.5px;
+    color: #222;
+  }
+
+  ul li::before {
+    content: '▸';
+    position: absolute; left: 0;
+    color: var(--gold);
+    font-size: 8px;
+    top: 2px;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    color: #4a3800;
+    background: rgba(184,134,11,0.1);
+    padding: 0 3px;
+    border-radius: 2px;
+  }
+
+  strong { font-weight: 600; }
+
+  /* ── RIGHT: education ────────────────────────────────────── */
+  .edu-entry { margin-bottom: 12px; }
+
+  .edu-name {
+    font-weight: 700;
+    font-size: 11.5px;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+
+  .edu-degree {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .edu-meta {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--light);
+    margin-top: 2px;
+  }
+
+  /* ── RIGHT: projects ─────────────────────────────────────── */
+  .feat-entry { margin-bottom: 11px; }
+
+  .feat-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1px;
+  }
+
+  .feat-name {
+    font-weight: 700;
+    font-size: 11.5px;
+    color: var(--ink);
+  }
+
+  .feat-name a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .feat-name a:hover { border-color: var(--gold); }
+
+  .feat-tag {
+    font-family: var(--mono);
+    font-size: 8.5px;
+    color: var(--light);
+    flex-shrink: 0;
+    margin-left: 6px;
+  }
+
+  .feat-desc {
+    font-size: 10px;
+    color: #444;
+    line-height: 1.52;
+  }
+
+  .feat-metric {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--gold);
+    margin-top: 2px;
+  }
+
+  /* ── RIGHT: certs ────────────────────────────────────────── */
+  .cert-entry {
+    font-size: 10px;
+    margin-bottom: 3.5px;
+    display: flex;
+    gap: 4px;
+  }
+
+  .cert-name { font-weight: 600; color: var(--ink); }
+  .cert-meta { color: var(--light); }
+
+  /* ── RIGHT: skills ───────────────────────────────────────── */
+  .skill-row { margin-bottom: 7px; }
+
+  .skill-cat {
+    font-weight: 600;
+    font-size: 10.5px;
+    color: var(--ink);
+    margin-bottom: 1px;
+  }
+
+  .skill-vals {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* ── FOOTER ──────────────────────────────────────────────── */
+  .footer {
+    border-top: 1px solid var(--rule);
+    padding: 6px 36px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-brand {
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--rule);
+    letter-spacing: 0.08em;
+  }
+
+  .footer-url {
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── PRINT ───────────────────────────────────────────────── */
+  @media print {
+    @page { margin: 0; size: A4; }
+    body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { width: 100%; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="name-row">
+        <span class="name-prompt">&gt;_</span>
+        <h1>Shravan Omanakuttan</h1>
+      </div>
+      <div class="role">Software Engineer Intern &nbsp;·&nbsp; CS &amp; AI Student</div>
+      <div class="contact">
+        <a href="mailto:shravanomanakuttan@gmail.com">shravanomanakuttan@gmail.com</a>
+        <span class="sep">|</span>
+        <a href="https://github.com/sxrxvxnn" target="_blank">github.com/sxrxvxnn</a>
+        <span class="sep">|</span>
+        <a href="https://linkedin.com/in/shravanomanakuttan" target="_blank">linkedin.com/in/shravanomanakuttan</a>
+        <span class="sep">|</span>
+        Trivandrum, India
+      </div>
+    </div>
+    <div class="availability-badge">◉ AVAILABLE 2026</div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <!-- LEFT -->
+    <div class="left">
+
+      <section>
+        <h2>Experience</h2>
+
+        <div class="entry">
+          <div class="entry-top">
+            <span class="entry-company">Beagle Security</span>
+            <span class="entry-dates">Apr 2026 – Present</span>
+          </div>
+          <div class="entry-role">Software Engineer Intern — Business Development &nbsp;·&nbsp; Remote</div>
+          <ul>
+            <li>Built <strong>Sonar</strong> — a full-stack Apollo.io-style lead intelligence platform from scratch, replacing a <strong>$800/mo SaaS tool</strong> with a 90-day solo build now used daily by the sales team.</li>
+            <li>Architected a <code>FastAPI</code> backend on Vercel with <code>Supabase</code> PostgreSQL, handling auth, lead storage, and enrichment orchestration across company and prospect data at scale.</li>
+            <li>Shipped a <code>React</code> dashboard with <strong>10+ modules</strong> — Company Intelligence, Prospect Search, ICP Scoring, Email Sequences, Analytics, and Administration.</li>
+            <li>Built a <strong>Chrome Extension (Manifest V3)</strong> for one-click LinkedIn profile and company page extraction, syncing leads in real time to Sonar via authenticated REST API.</li>
+            <li>Engineered a <strong>multi-stage email enrichment pipeline</strong> — website scraping, pattern inference, <code>Hunter.io</code> and <code>Apollo</code> API integration — processing hundreds of companies concurrently.</li>
+            <li>Integrated <code>People Data Labs API</code> for large-scale prospect discovery; built AI-powered ICP scoring and business model classification using <code>Groq</code>, <code>Gemini</code>, and <code>OpenRouter</code>.</li>
+            <li>Implemented <code>PostHog</code> analytics for product usage tracking, funnel analysis, and feature adoption monitoring across the dashboard.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>Projects</h2>
+
+        <div class="entry">
+          <div class="entry-top">
+            <span class="entry-company">Lookalike Search Engine</span>
+            <span class="entry-dates">Apr 2026</span>
+          </div>
+          <div class="entry-role">Semantic B2B Company Matching &nbsp;·&nbsp; <code>Python</code> <code>FastAPI</code> <code>Groq</code> <code>PostgreSQL</code></div>
+          <ul>
+            <li>Feed any company, get ranked B2B lookalikes in <strong>&lt;2 seconds</strong>. Single structured Groq inference scores similarity across industry, business model, tech signals, and market segment — no vector DB.</li>
+          </ul>
+        </div>
+
+        <div class="entry">
+          <div class="entry-top">
+            <span class="entry-company">LinkedIn DM Verification Pipeline</span>
+            <span class="entry-dates">Apr 2026</span>
+          </div>
+          <div class="entry-role">Playwright Scraping Worker &nbsp;·&nbsp; <code>Python</code> <code>Playwright</code> <code>PostgreSQL</code></div>
+          <ul>
+            <li>Verifies <strong>1,200+ decision-maker profiles</strong> on LinkedIn in production — handles SPA rendering, hash-obfuscated class names, and cross-validates job titles against company website records.</li>
+          </ul>
+        </div>
+
+        <div class="entry">
+          <div class="entry-top">
+            <span class="entry-company">Sonar Chrome Extension</span>
+            <span class="entry-dates">Apr 2026</span>
+          </div>
+          <div class="entry-role">Browser Extension &nbsp;·&nbsp; <code>Chrome MV3</code> <code>TypeScript</code> <code>REST API</code></div>
+          <ul>
+            <li>One-click LinkedIn profile and company page extraction into Sonar. Service worker + content script architecture with real-time <code>Supabase</code> sync — works on both profile and company pages.</li>
+          </ul>
+        </div>
+      </section>
+
+    </div><!-- /left -->
+
+    <!-- RIGHT -->
+    <div class="right">
+
+      <section>
+        <h2>Education</h2>
+
+        <div class="edu-entry">
+          <div class="edu-name">SRM University Delhi-NCR</div>
+          <div class="edu-degree">B.Tech · Computer Science &amp; Engineering<br>(AI &amp; Data Science specialisation)</div>
+          <div class="edu-meta">2022 – Present &nbsp;·&nbsp; SGPA 7.0 / 10.0</div>
+        </div>
+
+        <div class="edu-entry">
+          <div class="edu-name">St. Antony's Public School</div>
+          <div class="edu-degree">Senior Secondary · CBSE · Kerala</div>
+          <div class="edu-meta">2019 – 2022</div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Skills</h2>
+
+        <div class="skill-row">
+          <div class="skill-cat">Languages</div>
+          <div class="skill-vals">Python · JavaScript · TypeScript · SQL</div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-cat">Frontend</div>
+          <div class="skill-vals">React.js · Next.js · SvelteKit · Chrome MV3</div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-cat">Backend &amp; Data</div>
+          <div class="skill-vals">FastAPI · PostgreSQL · Supabase · REST APIs</div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-cat">AI / LLMs</div>
+          <div class="skill-vals">Groq · Gemini · OpenRouter · Playwright · PDL</div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-cat">Tooling</div>
+          <div class="skill-vals">Git · Vercel · PostHog · Firecrawl · Hunter.io</div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Certifications</h2>
+        <div class="cert-entry"><span class="cert-name">Artificial Intelligence Analyst</span><span class="cert-meta">&nbsp;— IBM · Mar 2026</span></div>
+        <div class="cert-entry"><span class="cert-name">Databricks Fundamentals</span><span class="cert-meta">&nbsp;— Databricks · Jan 2026</span></div>
+        <div class="cert-entry"><span class="cert-name">IBM Certified App Developer – Cloud V1</span><span class="cert-meta">&nbsp;— Jan 2024</span></div>
+        <div class="cert-entry"><span class="cert-name">Cyber Security Certification</span><span class="cert-meta">&nbsp;— Udemy · Apr 2025</span></div>
+        <div class="cert-entry"><span class="cert-name">Introduction to Python</span><span class="cert-meta">&nbsp;— IBM · Mar 2024</span></div>
+      </section>
+
+    </div><!-- /right -->
+
+  </div><!-- /body -->
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span class="footer-brand">shravan-os v2.0.0 &nbsp;·&nbsp; shravanomanakuttan.vercel.app</span>
+    <span class="footer-url">github.com/sxrxvxnn/shravan-portfolio</span>
+  </div>
+
+</div><!-- /page -->
+
+</body>
+</html>

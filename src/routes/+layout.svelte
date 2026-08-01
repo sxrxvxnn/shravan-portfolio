@@ -8,13 +8,20 @@
 	import Lenis from 'lenis';
 
 	let { children } = $props();
-	let siteReady = $state(false);
-	let noiseUrl = $state('');
+	let siteReady      = $state(false);
+	let skipPreloader  = $state(false);
+	let noiseUrl       = $state('');
 
 	const SITE_URL = 'https://shravanomanakuttan.vercel.app';
 	const OG_IMAGE = `${SITE_URL}/og.svg`;
 
 	onMount(() => {
+		// skip preloader on return visits
+		if (localStorage.getItem('shravan-visited') === '1') {
+			skipPreloader = true;
+			siteReady     = true;
+		}
+
 		const c = document.createElement('canvas');
 		c.width = c.height = 256;
 		const ctx = c.getContext('2d')!;
@@ -62,11 +69,21 @@
 	<meta name="twitter:title" content="{resume.about.name} — Portfolio" />
 	<meta name="twitter:description" content={resume.about.bio} />
 	<meta name="twitter:image" content={OG_IMAGE} />
+	{@html `<script type="application/ld+json">${JSON.stringify({
+		"@context": "https://schema.org",
+		"@type": "Person",
+		"name": resume.about.name,
+		"jobTitle": "Software Engineer",
+		"url": SITE_URL,
+		"email": "shravanomanakuttan@gmail.com",
+		"alumniOf": { "@type": "CollegeOrUniversity", "name": "SRM University Delhi-NCR" },
+		"sameAs": ["https://github.com/sxrxvxnn", "https://linkedin.com/in/shravanomanakuttan"]
+	})}<\/script>`}
 </svelte:head>
 
 <Cursor />
 
-{#if browser}
+{#if browser && !skipPreloader}
 	<Preloader onDone={() => (siteReady = true)} />
 {/if}
 
