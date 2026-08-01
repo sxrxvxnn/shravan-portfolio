@@ -9,26 +9,18 @@
 	import { preloaderDone } from '$lib/stores/preloader';
 
 	let { children } = $props();
-	let siteReady = $state(false);
 	let noiseUrl  = $state('');
 
 	const SITE_URL = 'https://shravanomanakuttan.vercel.app';
 	const OG_IMAGE = `${SITE_URL}/og.svg`;
 
 	function handlePreloaderDone() {
-		siteReady = true;
 		preloaderDone.set(true);
 	}
 
 	onMount(() => {
-		// Failsafe: if Preloader never calls onDone (canvas crash, font timeout, etc.)
-		// force show after 8s so site is never permanently blank
-		const failsafe = setTimeout(() => {
-			if (!siteReady) {
-				siteReady = true;
-				preloaderDone.set(true);
-			}
-		}, 8000);
+		// Failsafe: if Preloader never calls onDone, unblock terminal after 7s
+		const failsafe = setTimeout(() => { preloaderDone.set(true); }, 7000);
 
 		const c = document.createElement('canvas');
 		c.width = c.height = 256;
@@ -47,6 +39,7 @@
 		requestAnimationFrame(raf);
 		return () => { clearTimeout(failsafe); lenis.destroy(); };
 	});
+
 
 	onNavigate((navigation) => {
 		if (!document.startViewTransition) return;
@@ -99,7 +92,7 @@
 	<div class="noise-overlay" style="background-image: url({noiseUrl})"></div>
 {/if}
 
-<div class="site-wrap" class:ready={siteReady || !browser}>
+<div class="site-wrap">
 	{@render children()}
 </div>
 
@@ -152,9 +145,5 @@
 	.site-wrap {
 		position: relative;
 		z-index: 2;
-		opacity: 0;
-		transition: opacity 0.5s ease;
 	}
-
-	.site-wrap.ready { opacity: 1; }
 </style>
