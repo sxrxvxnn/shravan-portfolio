@@ -29,6 +29,40 @@
 	let typetestTarget = '';
 	let typetestStart  = 0;
 
+	// ── Cursor style ───────────────────────────────────────────────────────────
+	const CURSOR_KEY = 'shravan-cursor';
+	let cursorStyle = $state<'block'|'beam'|'underline'>('block');
+
+	// ── CRT ────────────────────────────────────────────────────────────────────
+	const CRT_KEY = 'shravan-crt';
+	let crtLevel = $state<'on'|'subtle'|'off'>('on');
+
+	// ── Uptime ─────────────────────────────────────────────────────────────────
+	let sessionStart = 0;
+
+	// ── Snake game ─────────────────────────────────────────────────────────────
+	const SCOLS = 26, SROWS = 18;
+	const SNAKE_HI_KEY = 'shravan-snake-hi';
+	let snakeActive   = $state(false);
+	let snakeDisplay  = $state('');
+	let snakeDead     = $state(false);
+	let snakePaused   = $state(false);
+	let snakeScore    = $state(0);
+	let snakeHi       = $state(0);
+	let _sg: {
+		body: Array<[number,number]>; dir: [number,number]; next: [number,number];
+		food: [number,number]; score: number; hi: number; alive: boolean; paused: boolean;
+	} | null = null;
+
+	// ── Projects TUI ───────────────────────────────────────────────────────────
+	let projTUIActive = $state(false);
+	let projTUIIdx    = $state(0);
+
+	// ── PWA ────────────────────────────────────────────────────────────────────
+	let isOffline     = $state(false);
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let installPrompt: any = null;
+
 	const TYPETEST_SENTENCES = [
 		'shravan builds things that work before the deadline hits',
 		'ninety days and ten modules later sonar was born',
@@ -179,8 +213,9 @@
 			const canvas = particleCanvas;
 			canvas.width  = window.innerWidth;
 			canvas.height = window.innerHeight;
-			const ctx = canvas.getContext('2d');
-			if (!ctx) return;
+			const rawCtx = canvas.getContext('2d');
+			if (!rawCtx) return;
+			const ctx: CanvasRenderingContext2D = rawCtx;
 			const glyphs = '░▒▓█▄▀■◆●◇○□';
 			const pts = Array.from({ length: 52 }, () => ({
 				x:    window.innerWidth  / 2 + (Math.random() - 0.5) * 400,
@@ -314,20 +349,26 @@
 			const canvas = matrixCanvas;
 			canvas.width  = window.innerWidth;
 			canvas.height = window.innerHeight;
-			const ctx  = canvas.getContext('2d')!;
+			const ctx   = canvas.getContext('2d')!;
 			const cols  = Math.floor(canvas.width / 14);
 			const drops = Array<number>(cols).fill(1);
 			const chars = 'アイウエオカキクケコ0123456789ABCDEF<>{}[]()';
+			const bgCol     = currentTheme.bg;
+			const accentCol = currentTheme.accent;
+			const dimCol    = currentTheme.green;
 			let frame: number;
 
 			function draw() {
-				ctx.fillStyle = 'rgba(40,40,40,0.05)';
+				// semi-transparent bg fade using theme bg color
+				ctx.globalAlpha = 0.06;
+				ctx.fillStyle = bgCol;
 				ctx.fillRect(0, 0, canvas.width, canvas.height);
+				ctx.globalAlpha = 1;
 				ctx.font = '13px "JetBrains Mono", monospace';
 				drops.forEach((y, x) => {
 					const bright = Math.random() > 0.9;
-					ctx.fillStyle   = bright ? '#d9d7a8' : '#b8bb26';
-					ctx.globalAlpha = bright ? 1 : 0.7;
+					ctx.fillStyle   = bright ? accentCol : dimCol;
+					ctx.globalAlpha = bright ? 1 : 0.65;
 					ctx.fillText(chars[Math.floor(Math.random() * chars.length)], x * 14, y * 14);
 					ctx.globalAlpha = 1;
 					if (y * 14 > canvas.height && Math.random() > 0.975) drops[x] = 0;
@@ -340,7 +381,7 @@
 			const timer = setTimeout(() => {
 				cancelAnimationFrame(frame);
 				matrixActive = false;
-			}, 4000);
+			}, 5000);
 			return () => { cancelAnimationFrame(frame); clearTimeout(timer); };
 		}
 	});
@@ -353,6 +394,131 @@
 			window.addEventListener('keydown', quit);
 			return () => { clearInterval(iv); window.removeEventListener('keydown', quit); };
 		}
+	});
+
+	// ── Snake game ────────────────────────────────────────────────────────────
+	function snakeRandFood(body: Array<[number,number]>): [number,number] {
+		let pos: [number,number];
+		do { pos = [Math.floor(Math.random()*SCOLS), Math.floor(Math.random()*SROWS)]; }
+		while (body.some(([bx,by]) => bx===pos[0] && by===pos[1]));
+		return pos;
+	}
+
+	function snakeRender(g: NonNullable<typeof _sg>) {
+		const rows: string[] = [];
+		const border = '┌' + '─'.repeat(SCOLS) + '┐';
+		rows.push(border);
+		for (let y = 0; y < SROWS; y++) {
+			let row = '│';
+			for (let x = 0; x < SCOLS; x++) {
+				const isHead = g.body[0][0]===x && g.body[0][1]===y;
+				const isBody = !isHead && g.body.some(([bx,by]) => bx===x && by===y);
+				const isFood = g.food[0]===x && g.food[1]===y;
+				row += isHead ? '◉' : isBody ? '█' : isFood ? '◆' : ' ';
+			}
+			row += '│';
+			rows.push(row);
+		}
+		rows.push('└' + '─'.repeat(SCOLS) + '┘');
+		return rows.join('\n');
+	}
+
+	function snakeInit() {
+		const hi = parseInt(localStorage.getItem(SNAKE_HI_KEY) ?? '0');
+		const body: Array<[number,number]> = [[Math.floor(SCOLS/2), Math.floor(SROWS/2)]];
+		_sg = { body, dir:[1,0], next:[1,0], food: snakeRandFood(body), score:0, hi, alive:true, paused:false };
+		snakeDead   = false;
+		snakePaused = false;
+		snakeScore  = 0;
+		snakeHi     = hi;
+		snakeDisplay = snakeRender(_sg);
+	}
+
+	$effect(() => {
+		if (!snakeActive) return;
+		snakeInit();
+
+		const onKey = (e: KeyboardEvent) => {
+			if (!_sg) return;
+			e.preventDefault();
+			const k = e.key;
+			if (k === 'Escape') { snakeActive = false; return; }
+			if (k === 'r' || k === 'R') { snakeInit(); return; }
+			if (k === 'p' || k === 'P') {
+				_sg.paused = !_sg.paused;
+				snakePaused = _sg.paused;
+				return;
+			}
+			if (!_sg.alive || _sg.paused) return;
+			const dirs: Record<string, [number,number]> = {
+				ArrowUp:['w','W'].includes(k)?_sg.next:_sg.dir, w:[0,-1], W:[0,-1], ArrowUp_:[0,-1],
+				s:[0,1], S:[0,1],
+				a:[-1,0], A:[-1,0],
+				d:[1,0], D:[1,0],
+			};
+			const moveMap: Record<string, [number,number]> = {
+				ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0],
+				w:[0,-1], s:[0,1], a:[-1,0], d:[1,0],
+				W:[0,-1], S:[0,1], A:[-1,0], D:[1,0],
+			};
+			const nd = moveMap[k];
+			if (nd) {
+				// prevent reversing
+				if (!(nd[0] === -_sg.dir[0] && nd[1] === -_sg.dir[1])) _sg.next = nd;
+			}
+		};
+		window.addEventListener('keydown', onKey);
+
+		const iv = setInterval(() => {
+			if (!_sg || !_sg.alive || _sg.paused) return;
+			_sg.dir = _sg.next;
+			const [hx, hy] = _sg.body[0];
+			const nx = (hx + _sg.dir[0] + SCOLS) % SCOLS;
+			const ny = (hy + _sg.dir[1] + SROWS) % SROWS;
+			// collision with self
+			if (_sg.body.some(([bx,by]) => bx===nx && by===ny)) {
+				_sg.alive = false;
+				snakeDead = true;
+				if (_sg.score > _sg.hi) {
+					_sg.hi = _sg.score;
+					try { localStorage.setItem(SNAKE_HI_KEY, String(_sg.score)); } catch {}
+					snakeHi = _sg.hi;
+				}
+				snakeDisplay = snakeRender(_sg);
+				return;
+			}
+			_sg.body.unshift([nx, ny]);
+			if (nx === _sg.food[0] && ny === _sg.food[1]) {
+				_sg.score++;
+				snakeScore = _sg.score;
+				_sg.food = snakeRandFood(_sg.body);
+			} else {
+				_sg.body.pop();
+			}
+			snakeDisplay = snakeRender(_sg);
+		}, 140);
+
+		return () => {
+			clearInterval(iv);
+			window.removeEventListener('keydown', onKey);
+		};
+	});
+
+	// ── Projects TUI ─────────────────────────────────────────────────────────
+	$effect(() => {
+		if (!projTUIActive) return;
+		const onKey = (e: KeyboardEvent) => {
+			e.preventDefault();
+			if (e.key === 'Escape' || e.key === 'q') { projTUIActive = false; return; }
+			if (e.key === 'ArrowUp'   || e.key === 'k') projTUIIdx = Math.max(0, projTUIIdx - 1);
+			if (e.key === 'ArrowDown' || e.key === 'j') projTUIIdx = Math.min(PROJECT_KEYS.length - 1, projTUIIdx + 1);
+			if (e.key === 'Enter' || e.key === 'o') {
+				const p = PROJECTS[PROJECT_KEYS[projTUIIdx]];
+				if (p) window.open(p.url, '_blank');
+			}
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
 	});
 
 	// ── Scrollback persistence ────────────────────────────────────────────────
@@ -482,6 +648,11 @@
 		'changelog', 'version', 'easter', 'secrets', 'hint',
 		'sound on', 'sound off', 'sound',
 		'music', 'music on', 'music off', 'music play', 'music stop', 'music pause', 'music info', 'nowplaying', 'np',
+		'snake', 'timeline', 'uptime',
+		'cursor block', 'cursor beam', 'cursor underline', 'cursor list',
+		'crt on', 'crt subtle', 'crt off',
+		'projects -i', 'projects --interactive',
+		'install',
 		'neofetch', 'contact',
 		'open github', 'open linkedin', 'open email',
 		'man shravan', 'man help', 'man ls', 'man cat', 'man git',
@@ -552,7 +723,12 @@
 			{ t: 'out', text: '  font list             browse fonts', dim: true },
 			{ t: 'out', text: '  font <name>           switch terminal font', dim: true },
 			{ t: 'out', text: '  typetest  (or: tt)    typing speed test', dim: true },
-			{ t: 'out', text: '  glitch · hack         try them', dim: true },
+			{ t: 'out', text: '  glitch · hack · snake  try them', dim: true },
+			{ t: 'out', text: '  timeline              career timeline animation', dim: true },
+			{ t: 'out', text: '  uptime                session timer', dim: true },
+			{ t: 'out', text: '  projects -i           interactive project browser', dim: true },
+			{ t: 'out', text: '  cursor block|beam|underline   cursor shape', dim: true },
+			{ t: 'out', text: '  crt on|subtle|off     scanline intensity', dim: true },
 			{ t: 'out', text: '  music                 toggle background track', dim: true },
 			{ t: 'out', text: '  nowplaying  (np)      track info', dim: true },
 			{ t: 'out', text: '  man <cmd>             manual pages', dim: true },
@@ -789,16 +965,41 @@
 
 		// ── cat ──
 		if (verb === 'cat') {
-			if (arg === 'resume') {
-				window.open('/resume.html', '_blank');
-				return [
-					{ t: 'blank' },
-					{ t: 'out', text: 'opening resume...', green: true },
-					{ t: 'out', text: '  /resume.html', dim: true },
-					{ t: 'out', text: '  download resume  to save a copy', dim: true },
-					{ t: 'blank' },
-				];
-			}
+			if (arg === 'resume') return [
+				{ t: 'blank' },
+				{ t: 'out', text: 'SHRAVAN OMANAKUTTAN', accent: true },
+				{ t: 'out', text: 'shravanomanakuttan@gmail.com  ·  github.com/sxrxvxnn  ·  linkedin.com/in/shravanomanakuttan', dim: true },
+				{ t: 'blank' },
+				{ t: 'out', text: 'EXPERIENCE', accent: true },
+				{ t: 'out', text: '──────────────────────────────────────────────────────────────', dim: true },
+				{ t: 'out', text: 'Beagle Security — SWE Intern                       Apr 2026 – Present' },
+				{ t: 'out', text: '  ▸ Built Sonar: replaced $800/mo Apollo.io subscription, solo, 90 days', green: true },
+				{ t: 'out', text: '  ▸ 10+ modules: Company Intel · Prospect Search · ICP Scoring · Email' },
+				{ t: 'out', text: '  ▸ Chrome MV3 extension — one-click LinkedIn → Sonar profile sync' },
+				{ t: 'out', text: '  ▸ Multi-stage email enrichment: Hunter.io · Apollo · PDL · Groq AI' },
+				{ t: 'out', text: '  stack: FastAPI · React · TypeScript · Supabase · PostgreSQL · Vercel', dim: true },
+				{ t: 'blank' },
+				{ t: 'out', text: 'PROJECTS', accent: true },
+				{ t: 'out', text: '──────────────────────────────────────────────────────────────', dim: true },
+				{ t: 'out', text: 'Lookalike Search Engine', green: true },
+				{ t: 'out', text: '  Feed it any company → ranked B2B lookalikes in <2s · single Groq call' },
+				{ t: 'out', text: 'LinkedIn DM Pipeline', green: true },
+				{ t: 'out', text: '  Playwright scraper · SPA-aware · 1,200+ decision-maker profiles verified' },
+				{ t: 'out', text: 'Sonar Chrome Extension', green: true },
+				{ t: 'out', text: '  MV3 · TypeScript · real-time Supabase sync · profile + company pages' },
+				{ t: 'blank' },
+				{ t: 'out', text: 'SKILLS', accent: true },
+				{ t: 'out', text: '──────────────────────────────────────────────────────────────', dim: true },
+				{ t: 'out', text: '  Python · FastAPI · TypeScript · React · Svelte · PostgreSQL', dim: true },
+				{ t: 'out', text: '  Playwright · Groq · Chrome MV3 · Supabase · Docker · Vercel', dim: true },
+				{ t: 'blank' },
+				{ t: 'out', text: 'EDUCATION', accent: true },
+				{ t: 'out', text: '──────────────────────────────────────────────────────────────', dim: true },
+				{ t: 'out', text: 'SRM University Delhi-NCR  ·  B.Tech CS & AI  ·  2022–2026  ·  SGPA 7.0' },
+				{ t: 'blank' },
+				{ t: 'out', text: '  open resume  to view full PDF  ·  download resume  to save', dim: true },
+				{ t: 'blank' },
+			];
 			const p = PROJECTS[arg];
 			if (!p) return [
 				{ t: 'blank' },
@@ -991,22 +1192,25 @@
 			{ t: 'out', text: 'SHRAVAN-OS  CHANGELOG', accent: true },
 			{ t: 'out', text: '──────────────────────────────────────────', dim: true },
 			{ t: 'blank' },
-			{ t: 'out', text: '  v2.1  2026-08-01', accent: true },
-			{ t: 'out', text: '  ✦ 21 MonkeyType themes  (theme list)', green: true },
-			{ t: 'out', text: '  ✦ 9 fonts with live switch  (font list)' },
-			{ t: 'out', text: '  ✦ typing speed test  (typetest)', green: true },
-			{ t: 'out', text: '  ✦ mac keyboard sounds  (sound on/off)' },
-			{ t: 'out', text: '  ✦ animated skill bars, hire sequence' },
-			{ t: 'out', text: '  ✦ hack · glitch · ascii · screenshot' },
-			{ t: 'out', text: '  ✦ interactive contact wizard' },
-			{ t: 'out', text: '  ✦ particle burst on theme change' },
-			{ t: 'out', text: '  ✦ text scramble on boot' },
+			{ t: 'out', text: '  v2.2  2026-08-01', accent: true },
+			{ t: 'out', text: '  ✦ snake game  (snake)', green: true },
+			{ t: 'out', text: '  ✦ theme-aware matrix rain', green: true },
+			{ t: 'out', text: '  ✦ cursor styles  (cursor block|beam|underline)', green: true },
+			{ t: 'out', text: '  ✦ CRT scanline toggle  (crt on|subtle|off)' },
+			{ t: 'out', text: '  ✦ career timeline animation  (timeline)' },
+			{ t: 'out', text: '  ✦ session uptime  (uptime)' },
+			{ t: 'out', text: '  ✦ interactive projects browser  (projects -i)' },
+			{ t: 'out', text: '  ✦ PWA offline detection + install prompt' },
+			{ t: 'out', text: '  ✦ better cat resume (inline output)' },
+			{ t: 'blank' },
+			{ t: 'out', text: '  v2.1  2026-07-30', accent: true },
+			{ t: 'out', text: '  ✦ 21 MonkeyType themes  (theme list)', dim: true },
+			{ t: 'out', text: '  ✦ 9 fonts · typing test · keyboard sounds', dim: true },
+			{ t: 'out', text: '  ✦ background music  (konfused kid)', dim: true },
+			{ t: 'out', text: '  ✦ hack · glitch · ascii · screenshot', dim: true },
 			{ t: 'blank' },
 			{ t: 'out', text: '  v2.0  2026-07-28', accent: true },
-			{ t: 'out', text: '  ✦ matrix rain overlay', dim: true },
-			{ t: 'out', text: '  ✦ top / htop process viewer', dim: true },
-			{ t: 'out', text: '  ✦ Safari fixed-position fix', dim: true },
-			{ t: 'out', text: '  ✦ preloader store sync', dim: true },
+			{ t: 'out', text: '  ✦ matrix rain · top · Safari fix', dim: true },
 			{ t: 'blank' },
 		];
 
@@ -1564,6 +1768,88 @@
 			];
 		}
 
+		// ── uptime ──
+		if (cmd === 'uptime') {
+			const elapsed = Date.now() - sessionStart;
+			const s = Math.floor(elapsed / 1000) % 60;
+			const m = Math.floor(elapsed / 60000) % 60;
+			const h = Math.floor(elapsed / 3600000);
+			const upStr = h > 0 ? `${h}h ${m}m ${s}s` : m > 0 ? `${m}m ${s}s` : `${s}s`;
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: `  session uptime: ${upStr}`, accent: true },
+				{ t: 'out', text: `  load avg: 0.${Math.floor(Math.random()*99+1).toString().padStart(2,'0')}  ·  shravan-os 2.1.0`, dim: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── cursor ──
+		if (verb === 'cursor') {
+			const styles = ['block', 'beam', 'underline'];
+			if (!arg || arg === 'list') return [
+				{ t: 'blank' },
+				{ t: 'out', text: `  ${cursorStyle==='block'?'▶':'  '} cursor block       █  (default)`, ...(cursorStyle==='block'?{ accent:true }:{ dim:true }) },
+				{ t: 'out', text: `  ${cursorStyle==='beam'?'▶':'  '} cursor beam        |  thin caret`, ...(cursorStyle==='beam'?{ accent:true }:{ dim:true }) },
+				{ t: 'out', text: `  ${cursorStyle==='underline'?'▶':'  '} cursor underline   _  underline bar`, ...(cursorStyle==='underline'?{ accent:true }:{ dim:true }) },
+				{ t: 'blank' },
+			];
+			if (styles.includes(arg)) {
+				cursorStyle = arg as typeof cursorStyle;
+				try { localStorage.setItem(CURSOR_KEY, arg); } catch {}
+				return [{ t: 'blank' }, { t: 'out', text: `  cursor → ${arg}`, green: true }, { t: 'blank' }];
+			}
+			return [{ t: 'blank' }, { t: 'out', text: `  unknown cursor style. try: block  beam  underline`, dim: true }, { t: 'blank' }];
+		}
+
+		// ── crt ──
+		if (verb === 'crt') {
+			if (!arg) {
+				const next = crtLevel === 'on' ? 'subtle' : crtLevel === 'subtle' ? 'off' : 'on';
+				crtLevel = next;
+				try { localStorage.setItem(CRT_KEY, next); } catch {}
+				return [{ t: 'blank' }, { t: 'out', text: `  CRT scanlines → ${next}`, green: true }, { t: 'blank' }];
+			}
+			if (['on','subtle','off'].includes(arg)) {
+				crtLevel = arg as typeof crtLevel;
+				try { localStorage.setItem(CRT_KEY, arg); } catch {}
+				return [{ t: 'blank' }, { t: 'out', text: `  CRT → ${arg}`, green: true }, { t: 'blank' }];
+			}
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: `  crt on · crt subtle · crt off`, dim: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── timeline ── (actual animation handled in submit())
+		if (cmd === 'timeline') return [];
+
+		// ── snake ──
+		if (cmd === 'snake') {
+			snakeActive = true;
+			return [];
+		}
+
+		// ── projects -i ──
+		if (cmd === 'projects -i' || cmd === 'projects --interactive' || cmd === 'projects') {
+			projTUIIdx    = 0;
+			projTUIActive = true;
+			return [];
+		}
+
+		// ── install ──
+		if (cmd === 'install') {
+			if (installPrompt) {
+				installPrompt.prompt();
+				return [{ t: 'blank' }, { t: 'out', text: '  install prompt shown', green: true }, { t: 'blank' }];
+			}
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: '  app already installed or install not available in this browser', dim: true },
+				{ t: 'blank' },
+			];
+		}
+
 		return [
 			{ t: 'blank' },
 			{ t: 'out', text: `command not found: ${raw.trim()}` },
@@ -1686,6 +1972,40 @@
 		for (const s of steps) {
 			await push({ t: 'out', ...s });
 			await sleep(Math.random() * 180 + 70);
+		}
+		await push({ t: 'blank' });
+		busy = false;
+	}
+
+	// ── Timeline animation ────────────────────────────────────────────────────
+	async function runTimeline() {
+		busy = true;
+		const events = [
+			{ year:'2022', text:'enrolled — B.Tech CS & AI · SRM University, Delhi-NCR', dim: false },
+			{ year:'2023', text:'first open-source PR merged · discovered the deploy button', dim: false },
+			{ year:'2024', text:'built first full-stack project · FastAPI + React + Postgres', dim: false },
+			{ year:'2025 Jan', text:'started building Sonar — an Apollo.io replacement', accent: true },
+			{ year:'2025 Mar', text:'Chrome MV3 extension live · LinkedIn → Sonar in one click', dim: false },
+			{ year:'2025 Jun', text:'Lookalike Search shipped · <2s · single Groq inference', dim: false },
+			{ year:'2026 Apr', text:'SWE Intern — Beagle Security · production from day 1', green: true },
+			{ year:'2026 May', text:'Sonar v1 in production · replaced $800/mo SaaS, solo, 90 days', accent: true },
+			{ year:'2026 →  ', text:'building v2  ·  AI enrichment layer  ·  looking for next role', accent: true },
+		];
+		await push({ t: 'blank' });
+		await push({ t: 'out', text: 'TIMELINE', accent: true });
+		await push({ t: 'out', text: '─────────────────────────────────────────────────────', dim: true });
+		await push({ t: 'blank' });
+		for (const ev of events) {
+			const line: Extract<Line, { t: 'out' }> = { t: 'out', text: '', ...( ev.accent ? { accent: true } : ev.green ? { green: true } : ev.dim ? { dim: true } : {} ) };
+			const full = `  ${ev.year.padEnd(10)}  ${ev.text}`;
+			lines = [...lines, line];
+			await scrollBottom();
+			for (const ch of full) {
+				line.text += ch;
+				lines = [...lines];
+				await sleep(10);
+			}
+			await sleep(120);
 		}
 		await push({ t: 'blank' });
 		busy = false;
@@ -1894,6 +2214,13 @@
 			return;
 		}
 
+		if (lc === 'timeline') {
+			await push({ t: 'prompt', cmd: raw });
+			trackCommand('timeline');
+			await runTimeline();
+			return;
+		}
+
 		await push({ t: 'prompt', cmd: raw });
 		await push(...runCommand(raw));
 		trackCommand(lc);
@@ -1924,15 +2251,28 @@
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 	onMount(() => {
-		isMobile = window.innerWidth < 768;
+		isMobile    = window.innerWidth < 768;
+		sessionStart = Date.now();
 		window.addEventListener('resize', () => { isMobile = window.innerWidth < 768; });
 
-		// restore saved theme / font / sound
+		// restore saved theme / font / sound / cursor / crt
 		const savedTheme = localStorage.getItem(THEME_KEY);
 		if (savedTheme && THEMES[savedTheme]) currentTheme = THEMES[savedTheme];
 		const savedFont = localStorage.getItem(FONT_KEY);
 		if (savedFont && FONTS[savedFont]) loadFont(FONTS[savedFont]);
 		soundEnabled = localStorage.getItem(SOUND_KEY) !== '0';
+		const savedCursor = localStorage.getItem(CURSOR_KEY);
+		if (savedCursor === 'beam' || savedCursor === 'underline') cursorStyle = savedCursor;
+		const savedCrt = localStorage.getItem(CRT_KEY);
+		if (savedCrt === 'subtle' || savedCrt === 'off') crtLevel = savedCrt;
+
+		// PWA
+		const onOffline = () => { isOffline = true; };
+		const onOnline  = () => { isOffline = false; };
+		window.addEventListener('offline', onOffline);
+		window.addEventListener('online',  onOnline);
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		window.addEventListener('beforeinstallprompt', (e: any) => { e.preventDefault(); installPrompt = e; });
 
 		// URL params override: ?theme=synthwave&font=fira-code
 		const urlP = new URLSearchParams(window.location.search);
@@ -1982,6 +2322,8 @@
 			clearInterval(clockInterval);
 			window.removeEventListener('touchstart', onTouchStart);
 			window.removeEventListener('touchend',   onTouchEnd);
+			window.removeEventListener('offline', onOffline);
+			window.removeEventListener('online',  onOnline);
 		};
 	});
 </script>
@@ -1997,7 +2339,7 @@
 	role="main"
 >
 	<!-- scanlines + CRT flicker -->
-	<div class="scanlines" aria-hidden="true"></div>
+	<div class="scanlines" class:crt-subtle={crtLevel==='subtle'} class:crt-off={crtLevel==='off'} aria-hidden="true"></div>
 	<!-- vignette -->
 	<div class="vignette"  aria-hidden="true"></div>
 
@@ -2033,6 +2375,51 @@
 	</div>
 	{/if}
 
+	<!-- snake game overlay -->
+	{#if snakeActive}
+	<div class="snake-overlay" role="dialog" aria-label="snake game">
+		<div class="snake-hdr">SNAKE  ·  score: {snakeScore}  ·  hi: {snakeHi}  ·  arrows/wasd · p: pause · r: restart · esc: quit</div>
+		<div class="snake-body">
+			<pre class="snake-grid">{snakeDisplay}</pre>
+			{#if snakeDead}
+				<div class="snake-msg">GAME OVER  ·  score: {snakeScore}  ·  r: restart  esc: quit</div>
+			{:else if snakePaused}
+				<div class="snake-msg">PAUSED  ·  p: resume  esc: quit</div>
+			{/if}
+		</div>
+	</div>
+	{/if}
+
+	<!-- projects TUI overlay -->
+	{#if projTUIActive}
+	{@const projKey = PROJECT_KEYS[projTUIIdx]}
+	{@const proj = PROJECTS[projKey]}
+	<div class="proj-overlay" role="dialog" aria-label="projects browser">
+		<div class="proj-hdr">PROJECTS  ·  ↑↓/jk: navigate · enter/o: open · esc/q: close</div>
+		<div class="proj-body">
+			<div class="proj-list">
+				{#each PROJECT_KEYS as k, i}
+					<div class="proj-item" class:proj-selected={i===projTUIIdx}>{i===projTUIIdx?'▶':' '} {PROJECTS[k].name}</div>
+				{/each}
+			</div>
+			{#if proj}
+			<div class="proj-detail">
+				<div class="proj-dname">{proj.name}</div>
+				<div class="proj-ddesc">{proj.desc}</div>
+				<div class="proj-dmetric">{proj.metric}</div>
+				<div class="proj-dstack">{proj.tech.join('  ·  ')}</div>
+				<div class="proj-durl">{proj.url}</div>
+			</div>
+			{/if}
+		</div>
+	</div>
+	{/if}
+
+	<!-- offline banner -->
+	{#if isOffline}
+	<div class="offline-banner" role="alert">offline — reconnecting...</div>
+	{/if}
+
 	<!-- output area -->
 	<div class="output" bind:this={outputEl}>
 		{#each lines as line}
@@ -2057,12 +2444,12 @@
 				<div class="input-line">
 					<span class="prompt-txt">{PROMPT}</span>
 					<span class="input-ghost">&nbsp;{inputValue}</span>
-					<span class="cursor" aria-hidden="true"></span>
+					<span class="cursor" class:cursor-beam={cursorStyle==='beam'} class:cursor-underline={cursorStyle==='underline'} aria-hidden="true"></span>
 				</div>
 			{:else}
 				<div class="input-line">
 					<span class="prompt-txt">{PROMPT}</span>
-					<span class="cursor" aria-hidden="true"></span>
+					<span class="cursor" class:cursor-beam={cursorStyle==='beam'} class:cursor-underline={cursorStyle==='underline'} aria-hidden="true"></span>
 				</div>
 			{/if}
 		{:else if busy}
@@ -2119,7 +2506,11 @@
 
 	<!-- statusbar -->
 	<div class="statusbar" aria-hidden="true">
-		<span class="sb-avail">◉ available</span>
+		{#if isOffline}
+			<span class="sb-offline">⚡ offline</span>
+		{:else}
+			<span class="sb-avail">◉ available</span>
+		{/if}
 		{#if musicReady}
 			<span class="sb-div">│</span>
 			<span
@@ -2275,12 +2666,6 @@
 	}
 	.input-ghost { color: var(--fg, #ebdbb2); white-space: pre; }
 
-	.cursor {
-		display: inline-block; width: 8px; height: 1em;
-		background: var(--accent); margin-left: 1px; vertical-align: text-bottom;
-		animation: blink 1.1s step-start infinite;
-		box-shadow: 0 0 8px var(--accent-glow), 0 0 18px var(--accent-glow);
-	}
 	@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
 
 	.hidden-input {
@@ -2390,5 +2775,89 @@
 	.sb-music:hover { opacity: 1; }
 	.sb-music.sb-music-playing { color: var(--green); opacity: 1; animation: music-pulse 2.4s ease-in-out infinite; }
 	@keyframes music-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
-	.sb-clock { color: var(--dim, #7c6f64); font-variant-numeric: tabular-nums; }
+	.sb-clock   { color: var(--dim, #7c6f64); font-variant-numeric: tabular-nums; }
+	.sb-offline { color: #e06c75; text-shadow: 0 0 8px rgba(224,108,117,0.5); animation: music-pulse 1.4s ease-in-out infinite; }
+
+	/* ── CRT variants ─────────────────────────────────────────── */
+	.scanlines.crt-subtle { opacity: 0.3; }
+	.scanlines.crt-off    { display: none; }
+
+	/* ── Cursor variants ──────────────────────────────────────── */
+	.cursor { display: inline-block; width: 8px; height: 1em; background: var(--accent); margin-left: 1px; vertical-align: text-bottom; animation: blink 1.1s step-start infinite; box-shadow: 0 0 8px var(--accent-glow), 0 0 18px var(--accent-glow); }
+	.cursor.cursor-beam      { width: 2px; height: 1.15em; }
+	.cursor.cursor-underline { width: 9px; height: 2px; vertical-align: baseline; margin-bottom: 1px; }
+
+	/* ── Snake overlay ────────────────────────────────────────── */
+	.snake-overlay {
+		position: fixed; inset: 0; z-index: 65;
+		background: var(--bg, #282828);
+		display: flex; flex-direction: column;
+		align-items: center; justify-content: center;
+	}
+	.snake-hdr {
+		width: 100%;
+		background: var(--accent); color: var(--statusBg, #1d2021);
+		font-weight: 700; font-size: 12px; letter-spacing: 0.05em;
+		padding: 4px 16px; text-align: center;
+	}
+	.snake-body { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+	.snake-grid {
+		color: var(--fg, #ebdbb2);
+		font-size: clamp(12px, 1.4vw, 16px);
+		line-height: 1.45;
+		white-space: pre;
+		margin-top: 24px;
+	}
+	.snake-msg {
+		color: var(--accent); font-weight: 700; font-size: 13px;
+		letter-spacing: 0.06em; animation: blink 1s step-start infinite;
+	}
+
+	/* ── Projects TUI overlay ─────────────────────────────────── */
+	.proj-overlay {
+		position: fixed; inset: 0; z-index: 65;
+		background: var(--bg, #282828);
+		display: flex; flex-direction: column;
+	}
+	.proj-hdr {
+		background: var(--accent); color: var(--statusBg, #1d2021);
+		font-weight: 700; font-size: 12px; letter-spacing: 0.05em;
+		padding: 4px 16px;
+	}
+	.proj-body {
+		display: flex; flex: 1; overflow: hidden;
+		gap: 0;
+	}
+	.proj-list {
+		width: 220px; border-right: 1px solid var(--border, #3c3836);
+		padding: 20px 0;
+		flex-shrink: 0;
+		display: flex; flex-direction: column; gap: 2px;
+	}
+	.proj-item {
+		padding: 8px 20px; font-size: 13px;
+		color: var(--dim, #a89984);
+		cursor: pointer; white-space: nowrap;
+		transition: color 0.1s;
+	}
+	.proj-item.proj-selected { color: var(--accent); font-weight: 700; }
+	.proj-detail {
+		flex: 1; padding: 32px 40px;
+		display: flex; flex-direction: column; gap: 14px;
+	}
+	.proj-dname   { color: var(--accent); font-size: 18px; font-weight: 700; }
+	.proj-ddesc   { color: var(--fg, #ebdbb2); font-size: 13px; line-height: 1.7; white-space: pre-line; }
+	.proj-dmetric { color: var(--green); font-size: 12px; }
+	.proj-dstack  { color: var(--dim, #a89984); font-size: 12px; }
+	.proj-durl    { color: var(--dim, #665c54); font-size: 11px; }
+
+	/* ── Offline banner ───────────────────────────────────────── */
+	.offline-banner {
+		position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+		z-index: 200;
+		background: #e06c75; color: #1d2021;
+		font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+		padding: 4px 20px;
+		border-radius: 0 0 6px 6px;
+	}
 </style>
