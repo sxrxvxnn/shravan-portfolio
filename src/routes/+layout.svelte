@@ -43,10 +43,15 @@
 		ctx.putImageData(img, 0, 0);
 		noiseUrl = c.toDataURL();
 
-		const lenis = new Lenis({ duration: 1.2, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
-		function raf(time: number) { lenis.raf(time); requestAnimationFrame(raf); }
-		requestAnimationFrame(raf);
-		return () => { clearTimeout(failsafe); lenis.destroy(); };
+		// Skip Lenis on the home page (terminal is position:fixed, no scroll content).
+		// Lenis sets html/body { overflow: hidden } which breaks position:fixed in Safari.
+		let lenis: InstanceType<typeof Lenis> | null = null;
+		if (window.location.pathname !== '/') {
+			lenis = new Lenis({ duration: 1.2, easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+			function raf(time: number) { lenis!.raf(time); requestAnimationFrame(raf); }
+			requestAnimationFrame(raf);
+		}
+		return () => { clearTimeout(failsafe); lenis?.destroy(); };
 	});
 
 
