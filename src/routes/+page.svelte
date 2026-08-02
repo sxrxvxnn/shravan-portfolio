@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Terminal from '$lib/components/Terminal.svelte';
+	import WorkOverlay from '$lib/components/WorkOverlay.svelte';
 </script>
 
 <svelte:head>
@@ -9,3 +10,4 @@
 </svelte:head>
 
 <Terminal />
+<WorkOverlay />

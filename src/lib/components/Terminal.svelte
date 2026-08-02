@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { resume } from '$lib/data/resume.js';
 	import { preloaderDone } from '$lib/stores/preloader';
+	import { workOpen } from '$lib/stores/work';
 
 	type Line =
 		| { t: 'prompt'; cmd: string }
@@ -339,6 +340,7 @@
 		'ayu-dark':            { name:'ayu dark',              bg:'#0b0e14', fg:'#bfbdb6', dim:'#4d5566', statusBg:'#070a10', border:'#1a1e28', accent:'#ff8f40', glow:'rgba(255,143,64,0.45)',   green:'#aad94c', greenGlow:'rgba(170,217,76,0.4)'  },
 		coral:                 { name:'coral',                 bg:'#121212', fg:'#f5f5f5', dim:'#888888', statusBg:'#0a0a0a', border:'#1e1e1e', accent:'#ff7477', glow:'rgba(255,116,119,0.45)',  green:'#73c991', greenGlow:'rgba(115,201,145,0.4)' },
 		gruvbox_light:         { name:'gruvbox light',         bg:'#fbf1c7', fg:'#3c3836', dim:'#a89984', statusBg:'#ebdbb2', border:'#d5c4a1', accent:'#d65d0e', glow:'rgba(214,93,14,0.45)',   green:'#79740e', greenGlow:'rgba(121,116,14,0.4)'  },
+		kerala:                { name:'kerala',                bg:'#0d0a07', fg:'#e8d5b7', dim:'#7a6a55', statusBg:'#080604', border:'#2a1f14', accent:'#ff6b35', glow:'rgba(255,107,53,0.45)',   green:'#4ecdc4', greenGlow:'rgba(78,205,196,0.4)'  },
 	};
 	let currentTheme = $state(THEMES.gruvbox);
 
@@ -668,7 +670,8 @@
 		'theme one-dark', 'theme rose-pine', 'theme rose-pine-moon', 'theme kanagawa',
 		'theme everforest', 'theme matrix', 'theme cyberpunk', 'theme synthwave',
 		'theme serika', 'theme monokai', 'theme solarized', 'theme ayu-dark',
-		'theme coral', 'theme gruvbox_light',
+		'theme coral', 'theme gruvbox_light', 'theme kerala',
+		'work', 'demo', 'demo sonar', 'demo lookalike', 'demo linkedin',
 		'font', 'font list',
 		'font jetbrains', 'font fira-code', 'font ubuntu-mono', 'font roboto-mono',
 		'font source-code', 'font ibm-plex', 'font inconsolata', 'font space-mono', 'font anonymous-pro',
@@ -746,12 +749,14 @@
 			{ t: 'out', text: '  schedule              book a call', dim: true },
 			{ t: 'out', text: '  cat resume            view CV', dim: true },
 			{ t: 'out', text: '  download resume       save PDF', dim: true },
-			{ t: 'out', text: '  theme list            browse 21 themes', dim: true },
+			{ t: 'out', text: '  theme list            browse 22 themes', dim: true },
 			{ t: 'out', text: '  theme <name>          switch color theme', dim: true },
 			{ t: 'out', text: '  theme random          surprise me', dim: true },
 			{ t: 'out', text: '  font list             browse fonts', dim: true },
 			{ t: 'out', text: '  font <name>           switch terminal font', dim: true },
 			{ t: 'out', text: '  typetest  (or: tt)    typing speed test', dim: true },
+			{ t: 'out', text: '  work                  full portfolio overlay ↑', dim: true },
+			{ t: 'out', text: '  demo  (demo sonar)    inline ASCII mockup', dim: true },
 			{ t: 'out', text: '  glitch · hack · snake  try them', dim: true },
 			{ t: 'out', text: '  timeline              career timeline animation', dim: true },
 			{ t: 'out', text: '  uptime                session timer', dim: true },
@@ -1428,7 +1433,7 @@
 			return [
 				{ t: 'blank' },
 				{ t: 'out', text: `unknown theme: ${arg || '(none)'}`, dim: true },
-				{ t: 'out', text: '  theme list  to see all 21 themes', dim: true },
+				{ t: 'out', text: '  theme list  to see all 22 themes', dim: true },
 				{ t: 'blank' },
 			];
 		}
@@ -1861,6 +1866,84 @@
 			projTUIActive = true;
 			return [];
 		}
+
+		// ── work ──
+		if (cmd === 'work' || cmd === 'work open' || cmd === 'open work') {
+			setTimeout(() => workOpen.set(true), 0);
+			return [
+				{ t: 'blank' },
+				{ t: 'out', text: '  opening full portfolio view...', green: true },
+				{ t: 'out', text: '  esc  or  close  to return', dim: true },
+				{ t: 'blank' },
+			];
+		}
+
+		// ── demo ──
+		if (cmd === 'demo' || cmd === 'demo sonar') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'SONAR — Lead Intelligence Dashboard', accent: true },
+			{ t: 'out', text: '──────────────────────────────────────────────────────', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  ┌─────────────────────────────────────────────────┐' },
+			{ t: 'out', text: '  │  PROSPECTS                           [1,247 →]  │', dim: true },
+			{ t: 'out', text: '  │  ─────────────────────────────────────────────  │', dim: true },
+			{ t: 'out', text: '  │  Sarah Chen       VP Eng @ Stripe      ✓ ICP   │', green: true },
+			{ t: 'out', text: '  │  James O\'Brien    CTO @ Notion          ✓ ICP   │', green: true },
+			{ t: 'out', text: '  │  Amir Patel       Dir Eng @ Figma       ✓ ICP   │', green: true },
+			{ t: 'out', text: '  │  Marcus Lee       SWE Lead @ Linear     ~ match  │' },
+			{ t: 'out', text: '  │  Emma Johansson   Founder @ Cal.com     ~ match  │' },
+			{ t: 'out', text: '  │                                                  │', dim: true },
+			{ t: 'out', text: '  │  ICP SCORE     [██████████░░░░]  72%            │', accent: true },
+			{ t: 'out', text: '  │  EMAILS FOUND  [████████████░░]  84%            │', green: true },
+			{ t: 'out', text: '  │  COST SAVED    $800/mo  →  $0                  │', green: true },
+			{ t: 'out', text: '  └─────────────────────────────────────────────────┘' },
+			{ t: 'blank' },
+			{ t: 'out', text: '  built solo in 90 days · 10 modules in production', dim: true },
+			{ t: 'out', text: '  type  work  for full visual demo', accent: true },
+			{ t: 'blank' },
+		];
+
+		if (cmd === 'demo lookalike') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'LOOKALIKE SEARCH — B2B Discovery', accent: true },
+			{ t: 'out', text: '──────────────────────────────────────────────────────', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  $ query: stripe.com', green: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  ┌─────────────────────────────────────────────────┐' },
+			{ t: 'out', text: '  │  RESULTS  (1.4s)                        [sort] │', dim: true },
+			{ t: 'out', text: '  │  ─────────────────────────────────────────────  │', dim: true },
+			{ t: 'out', text: '  │  1. Paddle          ████████████████  98%      │', green: true },
+			{ t: 'out', text: '  │  2. Chargebee       ██████████████░░  91%      │', green: true },
+			{ t: 'out', text: '  │  3. Recurly         █████████████░░░  84%      │' },
+			{ t: 'out', text: '  │  4. Braintree       ████████████░░░░  77%      │' },
+			{ t: 'out', text: '  │  5. Adyen           ███████████░░░░░  70%      │' },
+			{ t: 'out', text: '  └─────────────────────────────────────────────────┘' },
+			{ t: 'blank' },
+			{ t: 'out', text: '  single Groq inference · no vector DB · <2s always', dim: true },
+			{ t: 'blank' },
+		];
+
+		if (cmd === 'demo linkedin') return [
+			{ t: 'blank' },
+			{ t: 'out', text: 'LINKEDIN PIPELINE — Decision Maker Scraper', accent: true },
+			{ t: 'out', text: '──────────────────────────────────────────────────────', dim: true },
+			{ t: 'blank' },
+			{ t: 'out', text: '  ┌─────────────────────────────────────────────────┐' },
+			{ t: 'out', text: '  │  VERIFIED CONTACTS        [1,247 / 1,300]       │', green: true },
+			{ t: 'out', text: '  │  ─────────────────────────────────────────────  │', dim: true },
+			{ t: 'out', text: '  │  Name             Title              Status     │', dim: true },
+			{ t: 'out', text: '  │  Chen Wei         VP Engineering     ✓ verified │', green: true },
+			{ t: 'out', text: '  │  Priya Menon      Dir of Product     ✓ verified │', green: true },
+			{ t: 'out', text: '  │  Tom Hendricks    CTO                ✓ verified │', green: true },
+			{ t: 'out', text: '  │  Fatima Al-Zahra  Head of Sales      ⟳ pending  │', dim: true },
+			{ t: 'out', text: '  │                                                  │', dim: true },
+			{ t: 'out', text: '  │  SPA-aware  ·  hash-obfuscated  ·  Playwright  │', dim: true },
+			{ t: 'out', text: '  └─────────────────────────────────────────────────┘' },
+			{ t: 'blank' },
+			{ t: 'out', text: '  still running in production · no class-name chasing', dim: true },
+			{ t: 'blank' },
+		];
 
 		// ── install ──
 		if (cmd === 'install') {
@@ -2563,6 +2646,15 @@
 			>♫ {musicPlaying ? 'chenda bass' : '⏸'}</span>
 		{/if}
 		<span class="sb-fill"></span>
+		<span
+			class="sb-work"
+			onclick={() => workOpen.set(true)}
+			role="button"
+			tabindex="-1"
+			title="view full portfolio"
+			data-magnetic
+		>view work ↑</span>
+		<span class="sb-div">│</span>
 		{#if !isMobile}<span class="sb-hint">tab · ↑↓ · ctrl+l</span><span class="sb-div">│</span>{/if}
 		{#if !isMobile}<span class="sb-name">shravan omanakuttan</span><span class="sb-div">│</span>{/if}
 		<span class="sb-theme">{currentTheme.name}</span>
@@ -2849,6 +2941,8 @@
 	@keyframes music-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 	.sb-clock   { color: var(--dim, #7c6f64); font-variant-numeric: tabular-nums; }
 	.sb-offline { color: #e06c75; text-shadow: 0 0 8px rgba(224,108,117,0.5); animation: music-pulse 1.4s ease-in-out infinite; }
+	.sb-work { color: var(--accent); opacity: 0.85; cursor: pointer; user-select: none; transition: opacity 0.15s, letter-spacing 0.2s; letter-spacing: 0.07em; }
+	.sb-work:hover { opacity: 1; letter-spacing: 0.12em; }
 
 	/* ── prefers-reduced-motion ─────────────────────────────── */
 	@media (prefers-reduced-motion: reduce) {
