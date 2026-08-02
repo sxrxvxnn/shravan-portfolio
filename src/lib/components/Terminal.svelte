@@ -63,6 +63,35 @@
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let installPrompt: any = null;
 
+	// ── Entrance + theme wipe ──────────────────────────────────────────────────
+	let terminalEntered  = $state(false);
+	let themeWipeActive  = $state(false);
+	let themeWipeBg      = $state('#282828');
+	let themeWipeX       = $state(50);  // % from left
+	let themeWipeY       = $state(50);  // % from top
+
+	// ── Sync theme accent to :root for Cursor.svelte ──────────────────────────
+	$effect(() => {
+		document.documentElement.style.setProperty('--cursor-accent', currentTheme.accent);
+		document.documentElement.style.setProperty('--cursor-glow',   currentTheme.glow);
+	});
+
+	// ── Animated theme switch (radial wipe) ────────────────────────────────────
+	async function switchTheme(key: string, originX = 50, originY = 50) {
+		const t = THEMES[key];
+		if (!t) return;
+		themeWipeBg = t.bg;
+		themeWipeX  = originX;
+		themeWipeY  = originY;
+		themeWipeActive = true;
+		await sleep(230);        // overlay fully covers screen at ~midpoint
+		currentTheme = t;
+		try { localStorage.setItem(THEME_KEY, key); } catch {}
+		await sleep(260);        // let overlay linger so bg snap is hidden
+		themeWipeActive = false;
+		particleBurst = true;
+	}
+
 	const TYPETEST_SENTENCES = [
 		'shravan builds things that work before the deadline hits',
 		'ninety days and ten modules later sonar was born',
@@ -1388,16 +1417,12 @@
 			}
 			if (arg === 'random') {
 				const k = themeKeys[Math.floor(Math.random() * themeKeys.length)];
-				currentTheme = THEMES[k];
-				try { localStorage.setItem(THEME_KEY, k); } catch {}
-				particleBurst = true;
+				setTimeout(() => switchTheme(k), 0);
 				return [{ t: 'blank' }, { t: 'out', text: `theme → ${k}  (${THEMES[k].name})`, green: true }, { t: 'blank' }];
 			}
 			const t = THEMES[arg];
 			if (t) {
-				currentTheme = t;
-				try { localStorage.setItem(THEME_KEY, arg); } catch {}
-				particleBurst = true;
+				setTimeout(() => switchTheme(arg), 0);
 				return [{ t: 'blank' }, { t: 'out', text: `theme → ${arg}  (${t.name})`, green: true }, { t: 'blank' }];
 			}
 			return [
@@ -2029,6 +2054,9 @@
 		// site-wrap is opacity:0, so terminal loads invisibly before user sees it.
 		// On mobile we skip the cinematic ASCII boot — too slow and blank-looking.
 		if (isReturning || isMobile) {
+			// entrance: short fade-in without waiting for preloader
+			await sleep(60);
+			terminalEntered = true;
 			try {
 				const saved = localStorage.getItem(LINES_KEY);
 				if (saved) lines = JSON.parse(saved);
@@ -2054,6 +2082,8 @@
 		// 100ms buffer so the site-wrap CSS fade starts, then begin boot animation.
 		await awaitPreloader();
 		await sleep(100);
+		terminalEntered = true;
+		await sleep(80);
 		await push({ t: 'blank' });
 		for (const row of [
 			'  ███████╗██╗  ██╗██████╗  █████╗ ██╗   ██╗ █████╗ ███╗  ██╗',
@@ -2333,11 +2363,21 @@
 	class="terminal"
 	class:is-mobile={isMobile}
 	class:glitching={glitchActive}
+	class:terminal-entered={terminalEntered}
 	style="--accent:{currentTheme.accent};--accent-glow:{currentTheme.glow};--green:{currentTheme.green};--green-glow:{currentTheme.greenGlow};--bg:{currentTheme.bg};--fg:{currentTheme.fg};--dim:{currentTheme.dim};--statusBg:{currentTheme.statusBg};--border:{currentTheme.border};--font:{currentFont.family}"
 	onclick={() => { if (!isMobile) inputEl?.focus(); }}
 	onkeydown={() => {}}
 	role="main"
 >
+	<!-- theme wipe overlay -->
+	{#if themeWipeActive}
+		<div
+			class="theme-wipe"
+			style="background:{themeWipeBg}; --wx:{themeWipeX}%; --wy:{themeWipeY}%"
+			aria-hidden="true"
+		></div>
+	{/if}
+
 	<!-- scanlines + CRT flicker -->
 	<div class="scanlines" class:crt-subtle={crtLevel==='subtle'} class:crt-off={crtLevel==='off'} aria-hidden="true"></div>
 	<!-- vignette -->
@@ -2547,6 +2587,38 @@
 		color: var(--fg, #ebdbb2);
 		z-index: 10;
 		transition: background 0.35s ease, color 0.35s ease;
+		/* entrance state */
+		opacity: 0;
+		transform: translateY(22px);
+	}
+	.terminal.terminal-entered {
+		opacity: 1;
+		transform: translateY(0);
+		transition:
+			opacity     0.55s cubic-bezier(0.16, 1, 0.3, 1),
+			transform   0.55s cubic-bezier(0.16, 1, 0.3, 1),
+			background  0.35s ease,
+			color       0.35s ease;
+	}
+
+	/* ── Theme radial wipe ──────────────────────────────────── */
+	.theme-wipe {
+		position: fixed; inset: 0; z-index: 100;
+		pointer-events: none;
+		clip-path: circle(0% at var(--wx, 50%) var(--wy, 50%));
+		animation: wipe-expand 0.48s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+	}
+	@keyframes wipe-expand {
+		to { clip-path: circle(150% at var(--wx, 50%) var(--wy, 50%)); }
+	}
+
+	/* ── Line reveal animation ──────────────────────────────── */
+	.ln, .ln-blank {
+		animation: line-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
+	@keyframes line-in {
+		from { opacity: 0; transform: translateY(5px); }
+		to   { opacity: 1; transform: none; }
 	}
 
 	/* ── glitch animation ──────────────────────────────── */
@@ -2777,6 +2849,22 @@
 	@keyframes music-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
 	.sb-clock   { color: var(--dim, #7c6f64); font-variant-numeric: tabular-nums; }
 	.sb-offline { color: #e06c75; text-shadow: 0 0 8px rgba(224,108,117,0.5); animation: music-pulse 1.4s ease-in-out infinite; }
+
+	/* ── prefers-reduced-motion ─────────────────────────────── */
+	@media (prefers-reduced-motion: reduce) {
+		.terminal, .terminal.terminal-entered {
+			opacity: 1; transform: none;
+			transition: background 0.01ms, color 0.01ms;
+		}
+		.theme-wipe { animation: none; clip-path: none; }
+		.ln, .ln-blank { animation: none; }
+		.glitching { animation: none; }
+		.scanlines { animation: none; }
+		.cursor { animation: none; opacity: 1; }
+		.sb-music.sb-music-playing { animation: none; }
+		.sb-offline { animation: none; }
+		.snake-msg  { animation: none; }
+	}
 
 	/* ── CRT variants ─────────────────────────────────────────── */
 	.scanlines.crt-subtle { opacity: 0.3; }
